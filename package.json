@@ -4,7 +4,10 @@
   "description": "",
   "main": "app.ts",
   "scripts": {
+<<<<<<< HEAD
+=======
     "dev": "nodemon --exec ts-node src/server.ts"
+>>>>>>> origin/main
   },
   "keywords": [],
   "author": "",
