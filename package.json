@@ -4,7 +4,6 @@
   "description": "",
   "main": "app.ts",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/server.ts"
   },
   "keywords": [],
   "author": "",
