@@ -5,4 +5,6 @@ export interface RegisterDto {
     lastName: string;
     birthday: Date;
     roles: string;
+    placeWork?: string;
+
 }
