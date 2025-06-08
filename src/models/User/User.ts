@@ -15,14 +15,7 @@ const userSchema = new Schema({
         default: 'user',
     },
     isVerified: { type: Boolean, default: false },
-    createdAt:  { type: Date, default: Date.now },
-    posts: [{
-        type: Types.ObjectId,
-        ref: 'Post',
-        required: function (this: any) {
-            return this.role !== 'user';
-        }
-    }]
+    createdAt:  { type: Date, default: Date.now }
 });
 
 // выводим тип из схемы

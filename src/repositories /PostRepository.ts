@@ -1,9 +1,12 @@
 import {CreatePostDto, PostFilterDto, UpdatePostDto} from "@/dto/PostDto";
 import {Post, PostModel} from "@/models/Post/Post";
+import mongoose from "mongoose";
 
 export interface IPostInterface {
     create(postData:CreatePostDto,authorId:string):Promise<Post>;
     findById(id: string): Promise<Post | null>;
+    findByIdRaw(id: string): Promise<Post | null>;
+
     findByAuthor(authorId:string,limit?:number,skip?:number):Promise<Post[]>;
     findFeed(limit?:number,skip?:number):Promise<Post[]>;
     findByFilter(filter:PostFilterDto):Promise<Post[]>;
@@ -33,6 +36,14 @@ export class IPostRepository implements IPostInterface {
         });
         return post.toObject();
     }
+    async findByIdRaw(id: string): Promise<Post | null> {
+        const post = await PostModel
+            .findById(id)
+            // БЕЗ .populate() - получаем только ObjectId
+            .lean();
+
+        return post;
+    }
     async findById(id: string): Promise<Post | null> {
         const post = await PostModel
             .findById(id) // упрощаем, без isDeleted пока
@@ -43,7 +54,7 @@ export class IPostRepository implements IPostInterface {
     }
     async findByAuthor(authorId: string, limit = 20, skip = 0): Promise<Post[]> {
         const posts = await PostModel
-            .find({ authorId, isDeleted: false })
+            .find({ authorId: new mongoose.Types.ObjectId(authorId) })
             .sort({ createdAt: -1 }) // новые сначала
             .limit(limit)
             .skip(skip)
