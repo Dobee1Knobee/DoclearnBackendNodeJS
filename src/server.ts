@@ -5,6 +5,7 @@ import authRoutes from "@/routes/authRoutes";
 // import searchRoutes from "./src/routes/searchRoutes";
 import { connectDB } from "./config /db";
 import {errorHandler} from "@/middlewares/errorHandler";
+import postRoutes from "@/routes/postRoutes";
 
 const app = express();
 
@@ -14,6 +15,7 @@ async function main() {
         app.use(express.json());
 
         app.use("/auth", authRoutes);
+        app.use("/post", postRoutes);
 
         // Обязательно внизу
         app.use(errorHandler); // 👈 теперь без ошибки
