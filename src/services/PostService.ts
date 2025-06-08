@@ -106,7 +106,7 @@ export class PostService {
                 throw new ApiError(404, "Пост не найден");
             }
 
-            if (existingPost.authorId !== authorId) {
+            if (existingPost.authorId.toString() !== authorId) {
                 throw new ApiError(403, "Нет прав для редактирования этого поста");
             }
 
@@ -133,22 +133,19 @@ export class PostService {
     // Удаление поста
     async deletePost(postId: string, authorId: string): Promise<void> {
         try {
-            // Проверяем права
-            const existingPost = await this.postRepository.findById(postId);
+            const existingPost = await this.postRepository.findByIdRaw(postId);
 
             if (!existingPost) {
                 throw new ApiError(404, "Пост не найден");
             }
 
-            if (existingPost.authorId !== authorId) {
+            // ✅ Приводим ObjectId к строке для сравнения
+            if (existingPost.authorId.toString() !== authorId) {
                 throw new ApiError(403, "Нет прав для удаления этого поста");
             }
 
-            const deleted = await this.postRepository.delete(postId);
+            await this.postRepository.delete(postId);
 
-            if (!deleted) {
-                throw new ApiError(500, "Не удалось удалить пост");
-            }
         } catch (error) {
             if (error instanceof ApiError) {
                 throw error;

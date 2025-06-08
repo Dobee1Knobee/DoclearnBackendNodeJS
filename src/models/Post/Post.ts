@@ -13,7 +13,7 @@ const medicalTagSchema = new Schema({
 // Описание схемы поста
 const postSchema = new Schema({
     authorId: {
-        type: String,
+        type: Schema.Types.ObjectId, // ← ИСПРАВЛЕНО: String → ObjectId
         required: true,
         ref: "User",
         index: true,
@@ -38,12 +38,11 @@ const postSchema = new Schema({
         ],
     },
 
-    // ИСПРАВЛЯЕМ: делаем medical обязательным с дефолтами
     medical: {
         type: {
             tags: {
                 type: [medicalTagSchema],
-                default: [] // пустой массив по умолчанию
+                default: []
             },
             specialty: {
                 type: String,
@@ -52,7 +51,6 @@ const postSchema = new Schema({
                     'surgery', 'psychiatry', 'radiology', 'emergency',
                     'internal_medicine', 'dermatology', 'orthopedics', 'other'
                 ]
-                // НЕ required - может быть undefined
             },
             isCase: {
                 type: Boolean,
@@ -64,7 +62,7 @@ const postSchema = new Schema({
                 default: 'intermediate'
             }
         },
-        default: {} // дефолтный объект medical
+        default: {}
     },
 
     visibility: {
@@ -82,7 +80,7 @@ const postSchema = new Schema({
             shares: { type: Number, default: 0 },
             views: { type: Number, default: 0 },
         },
-        default: {} // дефолтный объект stats
+        default: {}
     },
 
     createdAt: { type: Date, default: Date.now },
@@ -100,9 +98,9 @@ postSchema.pre('save', function(next) {
     next();
 });
 
-// ДОБАВЛЯЕМ: Экспорт типов
+// Экспорт типов
 export type Post = InferSchemaType<typeof postSchema>;
 export type PublicPost = Omit<Post, "content.images" | "content.links">;
 
-// ДОБАВЛЯЕМ: Экспорт модели
+// Экспорт модели
 export const PostModel = model<Post>("Post", postSchema);
