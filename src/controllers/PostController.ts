@@ -187,7 +187,22 @@ export class PostController {
     async updatePost(request: AuthenticatedRequest, response: Response, next: NextFunction) {
         try {
             const { id } = request.params;
-            const authorId = request.user?.id;
+            const authorId = request.user?.id.toString();
+            const allowedFields = ['images', 'medicalTags', 'speciality', 'isCase','text','difficulty', 'visibility','speciality'];
+            const receivedFields = Object.keys(request.body);
+            const extraFields = receivedFields.filter(field => !allowedFields.includes(field));
+            if (extraFields.length > 0) {
+                throw new ApiError(400, `Недопустимые поля: ${extraFields.join(', ')}`);
+            }
+
+            // 🛡️ ВАЛИДАЦИЯ ТИПОВ И ЗНАЧЕНИЙ
+            if (request.body.text !== undefined && typeof request.body.text !== 'string') {
+                throw new ApiError(400, "Поле 'text' должно быть строкой");
+            }
+
+            if (request.body.medicalTags !== undefined && !Array.isArray(request.body.medicalTags)) {
+                throw new ApiError(400, "Поле 'medicalTags' должно быть массивом");
+            }
 
             if (!authorId) {
                 throw new ApiError(401, "Пользователь не авторизован");
@@ -204,7 +219,14 @@ export class PostController {
                 difficulty: request.body.difficulty,
                 visibility: request.body.visibility
             };
+            if (updateData.visibility && !['public', 'followers_only', 'private'].includes(updateData.visibility)) {
+                throw new ApiError(400, "Недопустимое значение visibility");
+            }
 
+            // Валидируем difficulty
+            if (updateData.difficulty && !['beginner', 'intermediate', 'advanced'].includes(updateData.difficulty)) {
+                throw new ApiError(400, "Недопустимое значение difficulty");
+            }
             const updatedPost = await this.postService.updatePost(id, updateData, authorId);
 
             response.status(200).json({

@@ -17,7 +17,8 @@ export class AuthController {
         try {
             const { email, password } = req.body;
             const result = await authService.login(email, password);
-            res.status(200).json(result);
+            res.cookie("token", result.token, { httpOnly: true });
+            res.status(200).json(result.user);
         } catch (err) {
             next(err);
         }
