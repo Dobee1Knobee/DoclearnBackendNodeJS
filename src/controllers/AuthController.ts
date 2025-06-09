@@ -40,7 +40,7 @@ export class AuthController {
     }
     async validateResetToken(req: Request, res: Response, next: NextFunction): Promise<void>  {
         try {
-            const { token } = req.params;
+            const  token  = req.cookies.token;
 
             if (!token) {
                 res.status(400).json({ error: "Токен обязателен" });
@@ -74,7 +74,7 @@ export class AuthController {
                 res.status(400).json({error:"Email некорректный"});
                 return
             }
-            await authService.createPasswordResetToken(email);
+            await authService.createPasswordResetToken(email,res);
             res.status(200).json({
                 message: "Если аккаунт с таким email существует, на него отправлена ссылка для сброса пароля"
             });

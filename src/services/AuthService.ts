@@ -10,6 +10,7 @@ import {ConflictError} from "@/errors/ConflictError";
 import * as crypto from "node:crypto";
 import {PasswordResetToken} from "@/models/Password/PasswordResetToken";
 import {IncorrectOrExpiredTokenError} from "@/errors/IncorrectOrExpiredToken";
+import {Response} from "express";
 
 // Временное хранилище кодов подтверждения
 const verificationCodes = new Map<string, string>();
@@ -86,7 +87,7 @@ export class AuthService {
         return !!user;
     }
 
-    async createPasswordResetToken(email: string) {
+    async createPasswordResetToken(email: string,res:Response) {
         try {
             const user: HydratedDocument<User> | null = await UserModel.findOne({ email }).exec();
             if (!user) {
@@ -103,9 +104,10 @@ export class AuthService {
                 token,
                 expiresAt: expires
             });
+            res.cookie("token", token, { maxAge: 15 * 60 * 1000 });
             const userEmail = user.email as string;
 
-            const resetLink = `https://doclearn.ru/reset-password?token=${token}`;
+            const resetLink = `https://doclearn.ru/reset-password`;
             await new EmailService().sendMail(userEmail, "Восстановление пароля", `Перейдите по ссылке, чтобы восстановить пароль: ${resetLink}`);
         } catch (error) {
             // Обрабатываем ошибки
