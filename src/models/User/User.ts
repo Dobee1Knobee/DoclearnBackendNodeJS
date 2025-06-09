@@ -14,6 +14,23 @@ const userSchema = new Schema({
         enum: ['student', 'teacher', 'admin', 'user', 'doc'],
         default: 'user',
     },
+    following: [{
+        type: Schema.Types.ObjectId,
+        ref: "User"
+    }],
+
+    // Кто читает меня (подписчики)
+    followers: [{
+        type: Schema.Types.ObjectId,
+        ref: "User"
+    }],
+
+    // Счётчики для UI (кешированные)
+    stats: {
+        followingCount: { type: Number, default: 0 },
+        followersCount: { type: Number, default: 0 },
+        postsCount: { type: Number, default: 0 }
+    },
     isVerified: { type: Boolean, default: false },
     createdAt:  { type: Date, default: Date.now }
 });

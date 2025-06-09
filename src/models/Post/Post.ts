@@ -1,4 +1,5 @@
 import mongoose, { Schema, Types, model, InferSchemaType } from "mongoose";
+import {string} from "zod";
 
 // Схема для медицинских тегов
 const medicalTagSchema = new Schema({
@@ -79,9 +80,11 @@ const postSchema = new Schema({
             comments: { type: Number, default: 0 },
             shares: { type: Number, default: 0 },
             views: { type: Number, default: 0 },
+            saves: { type: Number, default: 0 },
         },
         default: {}
     },
+    likedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],// ← Новое поле
 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
