@@ -64,6 +64,7 @@ export class AuthService {
             role: user.role as string
         }, process.env.JWT_SECRET || "megatopsec", { expiresIn: "1d" });
 
+
         return {
             token,
             user: toPublicUser(user.toObject())

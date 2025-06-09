@@ -99,8 +99,9 @@ export class PostService {
     // Обновление поста
     async updatePost(postId: string, updateData: UpdatePostDto, authorId: string): Promise<PostResponseDto> {
         try {
+
             // Проверяем, что пост существует и принадлежит пользователю
-            const existingPost = await this.postRepository.findById(postId);
+            const existingPost = await this.postRepository.findByIdRaw(postId);
 
             if (!existingPost) {
                 throw new ApiError(404, "Пост не найден");

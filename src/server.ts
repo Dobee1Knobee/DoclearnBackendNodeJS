@@ -6,12 +6,15 @@ import authRoutes from "@/routes/authRoutes";
 import { connectDB } from "./config /db";
 import {errorHandler} from "@/middlewares/errorHandler";
 import postRoutes from "@/routes/postRoutes";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
 async function main() {
     try {
         await connectDB();
+        app.use(cookieParser());    // ← ОБЯЗАТЕЛЬНО ДО роутов!
+
         app.use(express.json());
 
         app.use("/auth", authRoutes);

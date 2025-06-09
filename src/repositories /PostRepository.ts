@@ -105,9 +105,10 @@ export class IPostRepository implements IPostInterface {
 
 
     async update(id: string, updateData: UpdatePostDto): Promise<Post | null> {
+
         const post = await PostModel
             .findOneAndUpdate(
-                { _id: id, isDeleted: false },
+                { _id: id },
                 {
                     $set: {
                         'content.text': updateData.text,
@@ -118,7 +119,11 @@ export class IPostRepository implements IPostInterface {
                         updatedAt: new Date()
                     }
                 },
-                { new: true } // возвращаем обновленный документ
+                {
+                    new: true,
+                    runValidators: true, // ← ВОТ ЭТО!
+                    context: 'query'     // ← И ЭТО!
+                }// возвращаем обновленный документ
             )
             .populate('authorId', 'firstName lastName role')
             .lean();
