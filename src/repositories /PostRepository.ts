@@ -1,6 +1,6 @@
 import {CreatePostDto, PostFilterDto, UpdatePostDto} from "@/dto/PostDto";
 import {Post, PostModel} from "@/models/Post/Post";
-import mongoose from "mongoose";
+import mongoose, {Promise} from "mongoose";
 
 export interface IPostInterface {
     create(postData:CreatePostDto,authorId:string):Promise<Post>;
@@ -13,7 +13,9 @@ export interface IPostInterface {
     update(id:string,updateData:UpdatePostDto):Promise<Post | null>;
     delete(id:string):Promise<boolean>;
     incrementStats(id:string,field:"likes"|"comments"|"shares"|"views"):Promise<void>;
-    decrementStats(id:string,field:"likes"|"comments"|"shares"):Promise<void>; // добавь этот
+    decrementStats(id:string,field:"likes"|"comments"|"shares"):Promise<void>;
+    checkIfUserLiked(userId:string,id:string):Promise<boolean>;
+    addLike(postId:string,userId:string):Promise<boolean>;
 }
 
 export class IPostRepository implements IPostInterface {
@@ -143,11 +145,14 @@ export class IPostRepository implements IPostInterface {
     }
 
     async incrementStats(id: string, field: 'likes' | 'comments' | 'shares' | 'views'): Promise<void> {
+
         await PostModel.updateOne(
             { _id: id },
             { $inc: { [`stats.${field}`]: 1 } } // атомарное увеличение
         );
     }
+
+
     async findBySpecialty(specialty: string, limit = 20, skip = 0): Promise<Post[]> {
         const posts = await PostModel
             .find({
@@ -179,4 +184,46 @@ export class IPostRepository implements IPostInterface {
 
         return posts;
     }
+
+    async checkIfUserLiked(postId: string, userId: string): Promise<boolean> {
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+
+        const post = await PostModel.findOne({
+            _id: postId,
+            likedBy: userObjectId // ← MongoDB сам правильно сравнит
+        }).lean();
+
+        return !!post;
+    }
+
+    async addLike(postId: string, userId: string): Promise<boolean> {
+        const userObjectId = new mongoose.Types.ObjectId(userId); // ← Конвертируем
+
+        const result = await PostModel.updateOne(
+            {
+                _id: postId,
+                likedBy: { $ne: userObjectId } // ← ObjectId
+            },
+            {
+                $push: { likedBy: userObjectId }, // ← ObjectId
+                $inc: { 'stats.likes': 1 }
+            }
+        );
+
+        return result.modifiedCount > 0;
+    }
+    async deleteLike(postId: string, userId: string): Promise<boolean> {
+        const userObjectId = new mongoose.Types.ObjectId(userId); // ← Конвертируем
+        const result = await PostModel.updateOne(
+            {
+                _id: postId,
+                likedBy:  userObjectId // ← ObjectId
+            },
+            {
+                $pull: { likedBy: userObjectId }, // ← ObjectId
+                $inc: { 'stats.likes': -1 }
+            }
+        );
+
+        return result.modifiedCount > 0;    }
 }

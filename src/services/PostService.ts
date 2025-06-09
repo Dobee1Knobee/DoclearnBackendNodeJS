@@ -2,6 +2,7 @@ import { CreatePostDto, UpdatePostDto, PostFilterDto, PostResponseDto } from "@/
 import { ApiError } from "@/errors/ApiError";
 import {IPostRepository} from "@/repositories /PostRepository";
 import {Post} from "@/models/Post/Post";
+import mongoose from "mongoose";
 
 export class PostService {
     private postRepository: IPostRepository;
@@ -158,17 +159,22 @@ export class PostService {
     // Лайк поста
     async likePost(postId: string, userId: string): Promise<void> {
         try {
-            // Проверяем, что пост существует
+            // 1️⃣ СНАЧАЛА проверяем существование поста
             const post = await this.postRepository.findById(postId);
 
             if (!post) {
                 throw new ApiError(404, "Пост не найден");
             }
+            const userObjectID = new mongoose.Types.ObjectId(userId);
+            // 2️⃣ ПОТОМ проверяем лайк
+            if (await this.postRepository.checkIfUserLiked(postId, userId)) {
+                throw new ApiError(400, "Вы уже лайкнули этот пост");
+                // ИЛИ просто return; если игнорируем повторные лайки
+            }
 
-            // TODO: Проверить, что пользователь еще не лайкал этот пост
-            // (нужна будет модель Likes)
+            // 3️⃣ Добавляем лайк
+            await this.postRepository.addLike(postId, userId);
 
-            await this.postRepository.incrementStats(postId, "likes");
         } catch (error) {
             if (error instanceof ApiError) {
                 throw error;
@@ -185,6 +191,11 @@ export class PostService {
             if (!post) {
                 throw new ApiError(404, "Пост не найден");
             }
+            const userObjectID = new mongoose.Types.ObjectId(userId);
+            if (!await this.postRepository.checkIfUserLiked(postId, userId)) {
+                throw new ApiError(400, "У вас нет лайка на этот пост");
+            }
+            await this.postRepository.deleteLike(postId, userId)
 
             // TODO: Проверить, что пользователь лайкал этот пост
 
