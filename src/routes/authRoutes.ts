@@ -4,7 +4,6 @@ import rateLimit from 'express-rate-limit';
 
 const router = Router();
 const controller = new AuthController();
-
 const baseLimiterConfig = {
     windowMs: 15 * 60 * 1000, // 15 минут
     standardHeaders: true,     // Современные заголовки

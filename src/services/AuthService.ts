@@ -4,19 +4,21 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import * as process from "node:process";
 import {EmailService} from "./EmailService";
-import {toPublicUser} from "@/utils/toPublicUser";
+import {mapUserToPublicDto,} from "@/utils/toPublicUser";
 import {HydratedDocument} from "mongoose";
 import {ConflictError} from "@/errors/ConflictError";
 import * as crypto from "node:crypto";
 import {PasswordResetToken} from "@/models/Password/PasswordResetToken";
 import {IncorrectOrExpiredTokenError} from "@/errors/IncorrectOrExpiredToken";
 import {Response} from "express";
+import {UserDto} from "@/dto/UserDto";
+import {ApiError} from "@/errors/ApiError";
 
 // Временное хранилище кодов подтверждения
 const verificationCodes = new Map<string, string>();
 
 export class AuthService {
-    async register(dto: RegisterDto): Promise<PublicUser> {
+    async register(dto: RegisterDto): Promise<UserDto> {
         const existUser = await UserModel.findOne({ email: dto.email }).lean<User>();
         if (existUser) {
             throw new ConflictError("User already exists");
@@ -44,10 +46,10 @@ export class AuthService {
             `Ваш код: ${code}`
         );
 
-        return toPublicUser(newUser.toObject());
+        return mapUserToPublicDto(newUser.toObject());
     }
 
-    async login(email: string, password: string): Promise<{ token: string; user: PublicUser }> {
+    async login(email: string, password: string): Promise<{ token: string; user: UserDto }> {
         // Явно указываем тип HydratedDocument<User>
         const user: HydratedDocument<User> | null = await UserModel.findOne({ email }).exec();
 
@@ -68,7 +70,7 @@ export class AuthService {
 
         return {
             token,
-            user: toPublicUser(user.toObject())
+            user: mapUserToPublicDto(user.toObject())
         };
     }
 
@@ -91,7 +93,7 @@ export class AuthService {
         try {
             const user: HydratedDocument<User> | null = await UserModel.findOne({ email }).exec();
             if (!user) {
-                        return //безопасность
+                         throw new ApiError(400,"Такого пользователя не существует")
                 }
 
             const token = crypto.randomBytes(32).toString("hex");

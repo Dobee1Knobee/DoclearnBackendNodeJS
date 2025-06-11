@@ -2,6 +2,7 @@ import { User, UserModel } from "@/models/User/User";
 import mongoose from "mongoose";
 import { ApiError } from "@/errors/ApiError";
 
+// ✅ Интерфейс с префиксом I
 export interface IUserRepository {
     findByIdForProfile(id: string): Promise<User | null>;
     findByIdWithoutPassword(id: string): Promise<User | null>;
@@ -16,6 +17,7 @@ export interface IUserRepository {
     unfollow(followerId: string, followingId: string): Promise<void>;
 }
 
+// ✅ Класс без префикса I
 export class UserRepository implements IUserRepository {
 
     async findByIdWithoutPassword(id: string): Promise<User | null> {
@@ -32,6 +34,7 @@ export class UserRepository implements IUserRepository {
         try {
             return await UserModel.findById(id)
                 .select('firstName lastName email role placeWork stats isVerified createdAt')
+                .select('-password')
                 .lean();
         } catch (error) {
             return null;
@@ -44,6 +47,7 @@ export class UserRepository implements IUserRepository {
                 following: userId
             })
                 .select('firstName lastName role stats isVerified createdAt')
+                .select('-password')
                 .lean();
         } catch (error) {
             return [];
@@ -57,6 +61,7 @@ export class UserRepository implements IUserRepository {
 
             return await UserModel.find({ _id: { $in: user.following } })
                 .select('firstName lastName role stats isVerified createdAt')
+                .select('-password')
                 .lean();
         } catch (error) {
             return [];

@@ -1,5 +1,7 @@
-export interface PublicUserDto {
-    _id: string;  // ← MongoDB всегда возвращает _id
+import {MedicalTag} from "@/dto/PostDto";
+
+export interface UserDto {
+    id: string;  // ← MongoDB всегда возвращает _id
     firstName: string;
     lastName: string;
     email: string;
@@ -23,4 +25,13 @@ export interface PublicUserDto {
 
     // Дополнительное поле для UI
     isFollowing?: boolean;
+}
+
+
+export interface UpdatePostDto {
+    email?: string;
+    medicalTags?: MedicalTag[];
+    specialty?: string;
+    difficulty?: 'beginner' | 'intermediate' | 'advanced';
+    visibility?: 'public' | 'followers_only' | 'private';
 }
