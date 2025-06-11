@@ -4,7 +4,6 @@ import rateLimit from 'express-rate-limit';
 
 const router = Router();
 const controller = new AuthController();
-
 const baseLimiterConfig = {
     windowMs: 15 * 60 * 1000, // 15 минут
     standardHeaders: true,     // Современные заголовки
@@ -40,7 +39,7 @@ router.post("/verify-email", async (req: Request, res: Response) => {
 router.post("/request-password-reset", passwordResetLimiter, controller.requestPasswordReset);
 
 // GET /api/auth/validate-token/:token - Проверка валидности токена сброса
-router.get("/validate-token/:token", controller.validateResetToken);
+router.get("/validate-token", controller.validateResetToken);
 
 // POST /api/auth/reset-password - Сброс пароля по токену
 router.post("/reset-password", controller.resetPassword);
