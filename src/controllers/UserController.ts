@@ -1,17 +1,235 @@
 import { UserService } from "@/services/UserService";
 import { NextFunction, Request, Response } from "express";
+import { ApiError } from "@/errors/ApiError";
 
-const userService = new UserService();
+// Расширяем Request для типизации JWT payload
+interface AuthenticatedRequest extends Request {
+    user?: {
+        id: string;
+        email: string;
+        role: string;
+    };
+}
 
 export class UserController {
-    async getMyProfile(req: Request, res: Response, next: NextFunction) {
+    private userService: UserService;
+
+    constructor() {
+        this.userService = new UserService();
+    }
+
+    /**
+     * Получить профиль пользователя по ID
+     * GET /api/users/:id/profile
+     */
+    async getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const id = req.params.id;
-            const result = await userService.getUserProfile(id);
-            return res.status(200).json(result);
+            const userId = req.params.id;
+
+            if (!userId) {
+                throw new ApiError(400, "ID пользователя обязателен");
+            }
+
+            const result = await this.userService.getUserProfile(userId);
+            res.status(200).json({
+                success: true,
+                data: result
+            });
         } catch (error) {
             next(error);
         }
     }
 
+    /**
+     * Получить текущий профиль (аутентифицированного пользователя)
+     * GET /api/users/me
+     */
+    async getMyProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user?.id) {
+                throw new ApiError(401, "Пользователь не аутентифицирован");
+            }
+
+            const result = await this.userService.getUserProfile(req.user.id);
+            res.status(200).json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Получить подписчиков пользователя
+     * GET /api/users/:id/followers
+     */
+    async getFollowers(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const userId = req.params.id;
+
+            if (!userId) {
+                throw new ApiError(400, "ID пользователя обязателен");
+            }
+
+            const result = await this.userService.getFollowers(userId);
+            res.status(200).json({
+                success: true,
+                data: result,
+                count: result.length
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Получить подписки пользователя
+     * GET /api/users/:id/following
+     */
+    async getFollowing(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const userId = req.params.id;
+
+            if (!userId) {
+                throw new ApiError(400, "ID пользователя обязателен");
+            }
+
+            const result = await this.userService.getFollowing(userId);
+            res.status(200).json({
+                success: true,
+                data: result,
+                count: result.length
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Подписаться на пользователя
+     * POST /api/users/:id/follow
+     */
+    async followUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const followingId = req.params.id;
+            const followerId = req.user?.id;
+
+            if (!followerId) {
+                throw new ApiError(401, "Пользователь не аутентифицирован");
+            }
+
+            if (!followingId) {
+                throw new ApiError(400, "ID пользователя для подписки обязателен");
+            }
+
+            const result = await this.userService.followUser(followerId, followingId);
+            res.status(200).json({
+                success: true,
+                message: result.message
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Отписаться от пользователя
+     * DELETE /api/users/:id/follow
+     */
+    async unfollowUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const followingId = req.params.id;
+            const followerId = req.user?.id;
+
+            if (!followerId) {
+                throw new ApiError(401, "Пользователь не аутентифицирован");
+            }
+
+            if (!followingId) {
+                throw new ApiError(400, "ID пользователя для отписки обязателен");
+            }
+
+            const result = await this.userService.unfollowUser(followerId, followingId);
+            res.status(200).json({
+                success: true,
+                message: result.message
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Проверить, подписан ли текущий пользователь на другого
+     * GET /api/users/:id/is-following
+     */
+    async checkIsFollowing(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const followingId = req.params.id;
+            const followerId = req.user?.id;
+
+            if (!followerId) {
+                throw new ApiError(401, "Пользователь не аутентифицирован");
+            }
+
+            if (!followingId) {
+                throw new ApiError(400, "ID пользователя обязателен");
+            }
+
+            const isFollowing = await this.userService.isFollowing(followerId, followingId);
+            res.status(200).json({
+                success: true,
+                data: { isFollowing }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Поиск пользователей
+     * GET /api/users/search?q=query&limit=20
+     */
+    async searchUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const query = req.query.q as string;
+            const limit = parseInt(req.query.limit as string) || 20;
+
+            if (!query || query.trim().length < 2) {
+                throw new ApiError(400, "Поисковый запрос должен содержать минимум 2 символа");
+            }
+
+            const result = await this.userService.searchUsers(query, limit);
+            res.status(200).json({
+                success: true,
+                data: result,
+                count: result.length
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Получить статистику пользователя
+     * GET /api/users/:id/stats
+     */
+    async getUserStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const userId = req.params.id;
+
+            if (!userId) {
+                throw new ApiError(400, "ID пользователя обязателен");
+            }
+
+            const result = await this.userService.getUserStats(userId);
+            res.status(200).json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
 }

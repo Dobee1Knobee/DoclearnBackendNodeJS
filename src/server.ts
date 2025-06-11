@@ -7,6 +7,7 @@ import { connectDB } from "./config /db";
 import {errorHandler} from "@/middlewares/errorHandler";
 import postRoutes from "@/routes/postRoutes";
 import cookieParser from "cookie-parser";
+import userRoutes from "@/routes/userRoutes";
 
 const app = express();
 
@@ -19,7 +20,7 @@ async function main() {
 
         app.use("/auth", authRoutes);
         app.use("/post", postRoutes);
-
+        app.use("/user",userRoutes)
         // Обязательно внизу
         app.use(errorHandler); // 👈 теперь без ошибки
 
