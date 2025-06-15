@@ -6,6 +6,8 @@ const authService = new AuthService();
 export class AuthController {
     async register(req: Request, res: Response, next: NextFunction) {
         try {
+            res.clearCookie("token");
+
             const user = await authService.register(req.body);
             res.status(201).json(user);
         } catch (err) {

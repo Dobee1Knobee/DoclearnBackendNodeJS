@@ -20,6 +20,7 @@ const verificationCodes = new Map<string, string>();
 export class AuthService {
     async register(dto: RegisterDto): Promise<UserDto> {
         const existUser = await UserModel.findOne({ email: dto.email }).lean<User>();
+
         if (existUser) {
             throw new ConflictError("User already exists");
         }
