@@ -35,6 +35,7 @@ export class AuthController {
             if (!isValid) {
                 return res.status(401).json({ error: "Неверный код подтверждения" });
             }
+            res.cookie("token", isValid.token, { httpOnly: true });
 
             return res.status(200).json({ message: "Email подтвержден и пользователь активирован" });
         } catch (err) {
