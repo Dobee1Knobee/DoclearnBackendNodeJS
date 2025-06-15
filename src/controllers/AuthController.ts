@@ -6,6 +6,8 @@ const authService = new AuthService();
 export class AuthController {
     async register(req: Request, res: Response, next: NextFunction) {
         try {
+            res.clearCookie("token");
+
             const user = await authService.register(req.body);
             res.status(201).json(user);
         } catch (err) {
@@ -33,6 +35,7 @@ export class AuthController {
             if (!isValid) {
                 return res.status(401).json({ error: "Неверный код подтверждения" });
             }
+            res.cookie("token", isValid.token, { httpOnly: true });
 
             return res.status(200).json({ message: "Email подтвержден и пользователь активирован" });
         } catch (err) {

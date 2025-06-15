@@ -2,7 +2,6 @@ import mongoose, { Schema, Types, InferSchemaType, model, Model, Document } from
 
 // создаём схему
 const userSchema = new Schema({
-    id: { type: String, unique: true }, // Add the id field that AuthService expects
     firstName: { type: String, required: true },
     lastName:  { type: String, required: true },
     email:     { type: String, required: true, unique: true },

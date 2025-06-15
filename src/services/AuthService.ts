@@ -20,6 +20,7 @@ const verificationCodes = new Map<string, string>();
 export class AuthService {
     async register(dto: RegisterDto): Promise<UserDto> {
         const existUser = await UserModel.findOne({ email: dto.email }).lean<User>();
+
         if (existUser) {
             throw new ConflictError("User already exists");
         }
@@ -74,9 +75,11 @@ export class AuthService {
         };
     }
 
-    async verifyCode(email: string, code: string): Promise<boolean> {
+    async verifyCode(email: string, code: string): Promise<{ token: string; user: UserDto }> {
         const saved = verificationCodes.get(email);
-        if (saved !== code) return false;
+        if (saved !== code) {
+            throw new Error("Неверный код подтверждения");
+        }
 
         const user = await UserModel.findOneAndUpdate(
             { email },
@@ -84,10 +87,24 @@ export class AuthService {
             { new: true }
         ).exec();
 
+        if (!user) {
+            throw new Error("Пользователь не найден");
+        }
+
+        const token = jwt.sign({
+            id: user._id.toString(),
+            email: user.email as string,
+            role: user.role as string
+        }, process.env.JWT_SECRET || "megatopsec", { expiresIn: "1d" });
+
         verificationCodes.delete(email);
 
-        return !!user;
+        return {
+            token,
+            user: mapUserToPublicDto(user.toObject())
+        };
     }
+
 
     async createPasswordResetToken(email: string,res:Response) {
         try {
