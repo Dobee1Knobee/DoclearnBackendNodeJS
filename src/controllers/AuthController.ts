@@ -44,8 +44,13 @@ export class AuthController {
             }
 
             const result = await new AuthService().refreshAccessToken(refreshToken);
-
-            res.status(200).json(result);
+            res.cookie("token", result.token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none",
+                maxAge: 15 * 60 * 1000
+            });
+            res.status(200).json("Токен в cookies успешно обновлен");
         } catch (error) {
             next(error);
         }
