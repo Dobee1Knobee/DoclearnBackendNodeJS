@@ -13,6 +13,7 @@ import {IncorrectOrExpiredTokenError} from "@/errors/IncorrectOrExpiredToken";
 import {Response} from "express";
 import {UserDto} from "@/dto/UserDto";
 import {ApiError} from "@/errors/ApiError";
+import {IRefreshToken, RefreshTokenModel} from "@/models/Password/RefreshToken";
 
 // Временное хранилище кодов подтверждения
 const verificationCodes = new Map<string, string>();
@@ -49,8 +50,28 @@ export class AuthService {
 
         return mapUserToPublicDto(newUser.toObject());
     }
+     async createRefreshToken(userId: string): Promise<string> {
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 дней
 
-    async login(email: string, password: string): Promise<{ token: string; user: UserDto }> {
+        await RefreshTokenModel.create({
+            userId,
+            token,
+            expiresAt
+        });
+
+        return token;
+    }
+     async validateRefreshToken(token: string): Promise<string | null> {
+        const refreshToken = await RefreshTokenModel.findOne({ token }).exec();
+
+        if (!refreshToken || refreshToken.expiresAt < new Date()) {
+            return null;
+        }
+
+        return refreshToken.userId.toString();
+    }
+    async login(email: string, password: string): Promise<{ token: string; user: UserDto,refreshToken:string }> {
         // Явно указываем тип HydratedDocument<User>
         const user: HydratedDocument<User> | null = await UserModel.findOne({ email }).exec();
 
@@ -66,16 +87,40 @@ export class AuthService {
             id: user._id.toString(),
             email: user.email as string,
             role: user.role as string
-        }, process.env.JWT_SECRET || "megatopsec", { expiresIn: "1d" });
+        }, process.env.JWT_SECRET || "megatopsec", { expiresIn: "15min" });
 
+        const refreshToken = await this.createRefreshToken(user._id.toString());
 
         return {
             token,
+            refreshToken,
             user: mapUserToPublicDto(user.toObject())
         };
     }
 
-    async verifyCode(email: string, code: string): Promise<{ token: string; user: UserDto }> {
+    async refreshAccessToken(refreshToken: string): Promise<{ token: string }> {
+        const userId = await this.validateRefreshToken(refreshToken);
+
+        if (!userId) {
+            throw new Error("Invalid or expired refresh token");
+        }
+
+        const user = await UserModel.findById(userId).exec();
+
+        if (!user || !user.isVerified) {
+            throw new Error("User not found or not verified");
+        }
+
+        const token = jwt.sign({
+            id: user._id.toString(),
+            email: user.email as string,
+            role: user.role as string
+        }, process.env.JWT_SECRET || "megatopsec", { expiresIn: "15m" });
+
+        return { token };
+    }
+
+    async verifyCode(email: string, code: string): Promise<{ token: string; refreshToken: string; user: UserDto }> {
         const saved = verificationCodes.get(email);
         if (saved !== code) {
             throw new Error("Неверный код подтверждения");
@@ -95,23 +140,27 @@ export class AuthService {
             id: user._id.toString(),
             email: user.email as string,
             role: user.role as string
-        }, process.env.JWT_SECRET || "megatopsec", { expiresIn: "1d" });
+        }, process.env.JWT_SECRET || "megatopsec", { expiresIn: "15min" });
+
+        // Добавь эту строку:
+        const refreshToken = await this.createRefreshToken(user._id.toString());
 
         verificationCodes.delete(email);
 
         return {
             token,
+            refreshToken, // ✅ добавили
             user: mapUserToPublicDto(user.toObject())
         };
     }
 
 
-    async createPasswordResetToken(email: string,res:Response) {
+    async createPasswordResetToken(email: string, res: Response) {
         try {
             const user: HydratedDocument<User> | null = await UserModel.findOne({ email }).exec();
             if (!user) {
-                         throw new ApiError(400,"Такого пользователя не существует")
-                }
+                throw new ApiError(400, "Такого пользователя не существует")
+            }
 
             const token = crypto.randomBytes(32).toString("hex");
             const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 минут
@@ -123,20 +172,26 @@ export class AuthService {
                 token,
                 expiresAt: expires
             });
-            res.cookie("token", token, { maxAge: 15 * 60 * 1000 });
+
+            // ❌ УДАЛИ ЭТУ СТРОЧКУ:
+            // res.cookie("token", token, { maxAge: 15 * 60 * 1000 });
+
             const userEmail = user.email as string;
 
-            const resetLink = `https://doclearn.ru/reset-password`;
-            await new EmailService().sendMail(userEmail, "Восстановление пароля", `Перейдите по ссылке, чтобы восстановить пароль: ${resetLink}`);
+            // ✅ ИСПРАВЬ ССЫЛКУ - добавь токен в URL:
+            const resetLink = `https://doclearn.ru/reset-password?token=${token}`;
+
+            await new EmailService().sendMail(userEmail, "Восстановление пароля",
+                `Перейдите по ссылке, чтобы восстановить пароль: ${resetLink}`);
         } catch (error) {
-            // Обрабатываем ошибки
+            if (error instanceof ApiError) {
+                throw error; // прокидываем как есть
+            }
             if (error instanceof Error) {
-                throw new Error(error.message); // Перебрасываем с конкретным сообщением
+                throw new Error(error.message);
             }
             throw new Error("Неизвестная ошибка при восстановлении пароля");
         }
-
-
     }
     async validatePasswordResetToken(token:string){
         try {

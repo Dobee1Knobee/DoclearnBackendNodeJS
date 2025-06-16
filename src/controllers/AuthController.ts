@@ -20,31 +20,69 @@ export class AuthController {
         try {
             const { email, password } = req.body;
             const result = await authService.login(email, password);
-            res.cookie("token", result.token, { httpOnly: true });
-            res.status(200).json(result.user);
+            res.cookie("token", result.token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none",
+                maxAge: 15 * 60 * 1000, // ✅ исправили на 15 минут
+            });
+
+            res.status(200).json({
+                user: result.user,
+                refreshToken: result.refreshToken // ✅ добавили refreshToken в ответ
+            });
         } catch (err) {
             next(err);
         }
     }
+    async refresh(req: Request, res: Response,next: NextFunction) {
+        try {
+            const { refreshToken } = req.body;
 
+            if (!refreshToken) {
+                return res.status(400).json({ error: "Refresh token required" });
+            }
+
+            const result = await new AuthService().refreshAccessToken(refreshToken);
+            res.cookie("token", result.token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none",
+                maxAge: 15 * 60 * 1000
+            });
+            res.status(200).json("Токен в cookies успешно обновлен");
+        } catch (error) {
+            next(error);
+        }
+    }
     async verify(req: Request, res: Response, next: NextFunction) {
         try {
             const { email, code } = req.body;
-            const isValid = await authService.verifyCode(email, code);
+            const result = await authService.verifyCode(email, code); // изменил имя
 
-            if (!isValid) {
-                return res.status(401).json({ error: "Неверный код подтверждения" });
-            }
-            res.cookie("token", isValid.token, { httpOnly: true });
+            res.cookie("token", result.token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none",
+                maxAge: 15 * 60 * 1000 // 15 минут ✅
+            });
 
-            return res.status(200).json({ message: "Email подтвержден и пользователь активирован" });
+            return res.status(200).json({
+                message: "Email подтвержден и пользователь активирован",
+                refreshToken: result.refreshToken, // ✅ отправляем refreshToken
+                user: result.user // ✅ отправляем user
+            });
         } catch (err) {
             next(err);
         }
     }
-    async validateResetToken(req: Request, res: Response, next: NextFunction): Promise<void>  {
+    async validateResetToken(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const  token  = req.cookies.token;
+            // ❌ Старый код (читает из cookie):
+            // const token = req.cookies.token;
+
+            // ✅ Новый код (читает из query параметра):
+            const token = req.query.token as string;
 
             if (!token) {
                 res.status(400).json({ error: "Токен обязателен" });
@@ -54,7 +92,7 @@ export class AuthController {
             const isValid = await authService.validatePasswordResetToken(token);
 
             if (!isValid) {
-             res.status(400).json({ error: "Токен недействителен или истек" });
+                res.status(400).json({ error: "Токен недействителен или истек" });
                 return;
             }
 
