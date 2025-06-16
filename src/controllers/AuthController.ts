@@ -20,7 +20,12 @@ export class AuthController {
         try {
             const { email, password } = req.body;
             const result = await authService.login(email, password);
-            res.cookie("token", result.token, { httpOnly: true });
+            res.cookie("token", result.token, {
+                httpOnly: true,
+                secure: true,                // 💥 обязательно, если бэк на HTTPS
+                sameSite: "none",            // 💥 чтобы шла в XHR/fetch
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            });
             res.status(200).json(result.user);
         } catch (err) {
             next(err);
@@ -35,7 +40,13 @@ export class AuthController {
             if (!isValid) {
                 return res.status(401).json({ error: "Неверный код подтверждения" });
             }
-            res.cookie("token", isValid.token, { httpOnly: true });
+            res.cookie("token", isValid.token, {
+                httpOnly: true,
+                secure: true,                // 💥 обязательно, если бэк на HTTPS
+                sameSite: "none",            // 💥 чтобы шла в XHR/fetch
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            });
+
 
             return res.status(200).json({ message: "Email подтвержден и пользователь активирован" });
         } catch (err) {
