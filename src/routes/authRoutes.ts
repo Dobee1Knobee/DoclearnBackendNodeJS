@@ -1,4 +1,4 @@
-import { Router } from "express";
+import {NextFunction, Router} from "express";
 import { AuthController } from "@/controllers/AuthController";
 import rateLimit from 'express-rate-limit';
 
@@ -28,10 +28,11 @@ const passwordResetLimiter = rateLimit({
 });
 router.post("/register", controller.register);
 router.post("/login",controller.login)
-// @ts-ignore
-router.post("/verify-email", async (req: Request, res: Response) => {
-    // @ts-ignore
-    return controller.verify(req, res);
+router.post("/refresh", async (req, res, next) => {
+    await controller.refresh(req, res, next);
+});
+router.post("/verify-email", async (req, res,next) => {
+    await controller.verify(req, res,next);
 });
 
 
