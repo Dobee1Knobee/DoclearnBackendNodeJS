@@ -3,16 +3,38 @@ import mongoose, { Schema, Types, InferSchemaType, model, Model, Document } from
 // создаём схему
 const userSchema = new Schema({
     firstName: { type: String, required: true },
-    lastName:  { type: String, required: true },
-    email:     { type: String, required: true, unique: true },
-    password:  { type: String, required: true },
-    birthday:  { type: Date, required: true },
-    placeWork: { type: String },
-    role:      {
+    lastName: { type: String, required: true },
+    location: { type: String },
+    experience: { type: String },
+    specialization: { type: String }, // добавили специализацию
+    rating: { type: Number, default: 0 },
+    bio: { type: String },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    birthday: { type: Date, required: true },
+    role: {
         type: String,
-        enum: ['student', 'teacher', 'admin', 'user', 'doc'],
+        enum: ['student', 'admin', 'user', 'doctor'],
         default: 'user',
     },
+    placeWork: { type: String },
+    avatar: { type: String, required: true },
+    contacts: [{
+        type: {
+            type: String,
+            enum: ['phone', 'telegram', 'whatsapp', 'website', 'email', 'vk', 'facebook', 'twitter', 'instagram'],
+        },
+        value: { type: String, required: true },
+        isPublic: { type: Boolean, default: true }
+    }],
+    education: [{
+        institution: { type: String, required: true }, // "Первый МГМУ им. И.М. Сеченова"
+        degree: { type: String }, // "Специалитет", "Ординатура"
+        specialty: { type: String }, // "Лечебное дело"
+        graduationYear: { type: Number },
+        isCurrently: { type: Boolean, default: false }
+    }],
+
     following: [{
         type: Schema.Types.ObjectId,
         ref: "User"
@@ -23,15 +45,69 @@ const userSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "User"
     }],
-
+    joinTo: [{
+        eventId: { type: Schema.Types.ObjectId, ref: 'Announcement', required: true }, // вернули eventId
+        roleEvent: {
+            type: String,
+            enum: ['participant', 'speaker', 'organizer'],
+            required: true
+        },
+        status: {
+            type: String,
+            enum: ['pending', 'confirmed', 'declined'],
+            default: 'pending'
+        },
+        registeredAt: { type: Date, default: Date.now },
+        confirmedAt: { type: Date }
+    }],
     // Счётчики для UI (кешированные)
     stats: {
         followingCount: { type: Number, default: 0 },
         followersCount: { type: Number, default: 0 },
         postsCount: { type: Number, default: 0 }
     },
-    isVerified: { type: Boolean, default: false },
-    createdAt:  { type: Date, default: Date.now }
+
+    // Система модерации изменений профиля
+    pendingChanges: {
+        data: {
+            firstName: { type: String },
+            lastName: { type: String },
+            location: { type: String },
+            experience: { type: String },
+            bio: { type: String },
+            placeWork: { type: String },
+            specialization: { type: String },
+            avatar: { type: String },
+            contacts: [{
+                type: {
+                    type: String,
+                    enum: ['phone', 'telegram', 'whatsapp', 'website', 'email', 'vk', 'facebook', 'twitter', 'instagram']
+                },
+                value: { type: String },
+                isPublic: { type: Boolean }
+            }],
+            education: [{
+                institution: { type: String },
+                degree: { type: String },
+                specialty: { type: String },
+                graduationYear: { type: Number },
+                isCurrently: { type: Boolean }
+            }]
+        },
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending'
+        },
+        submittedAt: { type: Date, default: Date.now },
+        moderatorId: { type: Schema.Types.ObjectId, ref: 'User' },
+        moderatedAt: { type: Date },
+        moderatorComment: { type: String }
+    },
+
+    isVerified: { type: Boolean, default: false }
+}, {
+    timestamps: true // автоматические createdAt/updatedAt
 });
 
 // выводим тип из схемы

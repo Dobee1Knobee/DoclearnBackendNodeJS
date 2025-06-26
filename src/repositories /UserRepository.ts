@@ -2,7 +2,7 @@ import { User, UserModel } from "@/models/User/User";
 import mongoose from "mongoose";
 import { ApiError } from "@/errors/ApiError";
 
-// ✅ Интерфейс с префиксом I
+// ✅ Интерфейс с правильными типами
 export interface IUserRepository {
     findByIdForProfile(id: string): Promise<User | null>;
     findByIdWithoutPassword(id: string): Promise<User | null>;
@@ -20,7 +20,7 @@ export interface IUserRepository {
 // ✅ Класс без префикса I
 export class UserRepository implements IUserRepository {
 
-    async findByIdWithoutPassword(id: string): Promise<User | null> {
+    async findByIdWithoutPassword(id: string): Promise<any | null> {
         try {
             return await UserModel.findById(id)
                 .select('-password')
@@ -30,10 +30,10 @@ export class UserRepository implements IUserRepository {
         }
     }
 
-    async findByIdForProfile(id: string): Promise<User | null> {
+    async findByIdForProfile(id: string): Promise<any | null> {
         try {
             return await UserModel.findById(id)
-                .select('firstName lastName email role placeWork stats isVerified createdAt')
+                .select('firstName lastName location experience specialization rating bio email role placeWork contacts education stats isVerified createdAt updatedAt')
                 .select('-password')
                 .lean();
         } catch (error) {
@@ -41,12 +41,12 @@ export class UserRepository implements IUserRepository {
         }
     }
 
-    async findFollowers(userId: string): Promise<User[]> {
+    async findFollowers(userId: string): Promise<any[]> {
         try {
             return await UserModel.find({
                 following: userId
             })
-                .select('firstName lastName role stats isVerified createdAt')
+                .select('firstName lastName location experience specialization rating role contacts stats isVerified createdAt updatedAt')
                 .select('-password')
                 .lean();
         } catch (error) {
@@ -54,13 +54,13 @@ export class UserRepository implements IUserRepository {
         }
     }
 
-    async findFollowing(userId: string): Promise<User[]> {
+    async findFollowing(userId: string): Promise<any[]> {
         try {
             const user = await UserModel.findById(userId).select('following').lean();
             if (!user?.following?.length) return [];
 
             return await UserModel.find({ _id: { $in: user.following } })
-                .select('firstName lastName role stats isVerified createdAt')
+                .select('firstName lastName location experience rating role contacts stats isVerified createdAt updatedAt')
                 .select('-password')
                 .lean();
         } catch (error) {

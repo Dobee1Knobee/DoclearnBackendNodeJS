@@ -4,6 +4,7 @@ import { ApiError } from "@/errors/ApiError";
 import { UserDto } from "@/dto/UserDto";
 import { mapUserToPublicDto } from "@/utils/toPublicUser";
 import {IUserRepository, UserRepository} from "@/repositories /UserRepository";
+import {UpdateUserProfileDto} from "@/dto/UpdateUserProfile";
 
 export class UserService {
     private userRepository: IUserRepository;
@@ -134,9 +135,9 @@ export class UserService {
                     { lastName: searchRegex },
                     { email: searchRegex }
                 ],
-                isVerified: true // Показываем только верифицированных пользователей
+                isVerified: false // Показываем только верифицированных пользователей
             })
-                .select('firstName lastName email role placeWork stats isVerified createdAt')
+                .select('firstName lastName location experience rating bio email role placeWork contacts education stats isVerified')
                 .limit(limit)
                 .lean();
 
@@ -184,15 +185,162 @@ export class UserService {
             this.handleError(error, "Ошибка при получении статистики пользователя");
         }
     }
+// И заменяем updateUserProfile на версию с модерацией:
+    async updateUserProfile(userId: string, updateData: UpdateUserProfileDto): Promise<{ message: string; requiresModeration: boolean }> {
+        try {
+            // 1. Валидация
+            if (!userId || !updateData) {
+                throw new ApiError(400, "Неверные параметры");
+            }
 
-    // TODO: Добавить обновление профиля
-    // async updateUserProfile(userId: string, updateData: Partial<UserDto>): Promise<UserDto> {
-    //     try {
-    //         // Валидация данных
-    //         // Обновление в базе
-    //         // Возврат обновленного пользователя
-    //     } catch (error) {
-    //         this.handleError(error, "Ошибка при обновлении профиля");
-    //     }
-    // }
+            // 2. Проверка что приходят только допустимые поля
+            this.validateAllowedFields(updateData);
+
+            // 3. Проверка пользователя
+            const user = await UserModel.findById(userId);
+            if (!user) {
+                throw new ApiError(404, "Пользователь не найден");
+            }
+
+            // 4. Валидация данных
+            this.validateUpdateData(updateData);
+
+            // 5. Определяем нужна ли модерация
+            const requiresModeration = this.checkIfModerationRequired(updateData);
+
+            if (requiresModeration) {
+                // Сохраняем изменения на модерацию
+                await UserModel.findByIdAndUpdate(userId, {
+                    pendingChanges: {
+                        data: updateData,
+                        status: 'pending',
+                        submittedAt: new Date()
+                    }
+                });
+
+                return {
+                    message: "Изменения отправлены на модерацию",
+                    requiresModeration: true
+                };
+            } else {
+                // Применяем изменения сразу
+                await UserModel.findByIdAndUpdate(
+                    userId,
+                    { ...updateData },
+                    { new: true, runValidators: true }
+                );
+
+                return {
+                    message: "Профиль успешно обновлен",
+                    requiresModeration: false
+                };
+            }
+
+        } catch (error) {
+            this.handleError(error, "Ошибка при обновлении профиля");
+        }
+    }
+
+    /**
+     * Проверяет, что в запросе только допустимые поля
+     */
+    private validateAllowedFields(updateData: any): void {
+        const allowedFields = [
+            'firstName', 'lastName', 'location', 'experience',
+            'bio', 'placeWork', 'specialization', 'avatar',
+            'contacts', 'education'
+        ];
+
+        const receivedFields = Object.keys(updateData);
+        const invalidFields = receivedFields.filter(field => !allowedFields.includes(field));
+
+        if (invalidFields.length > 0) {
+            throw new ApiError(400, `Недопустимые поля: ${invalidFields.join(', ')}`);
+        }
+    }
+
+    /**
+     * Валидация содержимого полей
+     */
+    private validateUpdateData(updateData: UpdateUserProfileDto): void {
+        if (updateData.firstName !== undefined && updateData.firstName.trim().length < 2) {
+            throw new ApiError(400, "Имя должно содержать минимум 2 символа");
+        }
+
+        if (updateData.lastName !== undefined && updateData.lastName.trim().length < 2) {
+            throw new ApiError(400, "Фамилия должна содержать минимум 2 символа");
+        }
+
+        if (updateData.location !== undefined && updateData.location.trim().length < 2) {
+            throw new ApiError(400, "Местоположение должно содержать минимум 2 символа");
+        }
+
+        if (updateData.experience !== undefined && updateData.experience.trim().length < 1) {
+            throw new ApiError(400, "Опыт работы не может быть пустым");
+        }
+
+        // Валидация контактов
+        if (updateData.contacts !== undefined) {
+            this.validateContacts(updateData.contacts);
+        }
+
+        // Валидация образования
+        if (updateData.education !== undefined) {
+            this.validateEducation(updateData.education);
+        }
+    }
+
+    /**
+     * Валидация контактов
+     */
+    private validateContacts(contacts: UpdateUserProfileDto['contacts']): void {
+        if (!Array.isArray(contacts)) {
+            throw new ApiError(400, "Контакты должны быть массивом");
+        }
+
+        const allowedContactTypes = ['phone', 'telegram', 'whatsapp', 'website', 'email', 'vk', 'facebook', 'twitter', 'instagram'];
+
+        contacts.forEach((contact, index) => {
+            if (!contact.type || !contact.value) {
+                throw new ApiError(400, `Контакт ${index + 1}: тип и значение обязательны`);
+            }
+
+            if (!allowedContactTypes.includes(contact.type)) {
+                throw new ApiError(400, `Контакт ${index + 1}: недопустимый тип ${contact.type}`);
+            }
+
+            if (contact.value.trim().length < 1) {
+                throw new ApiError(400, `Контакт ${index + 1}: значение не может быть пустым`);
+            }
+        });
+    }
+
+    /**
+     * Валидация образования
+     */
+    private validateEducation(education: UpdateUserProfileDto['education']): void {
+        if (!Array.isArray(education)) {
+            throw new ApiError(400, "Образование должно быть массивом");
+        }
+
+        education.forEach((edu, index) => {
+            if (!edu.institution || edu.institution.trim().length < 2) {
+                throw new ApiError(400, `Образование ${index + 1}: название учебного заведения обязательно`);
+            }
+
+            if (edu.graduationYear !== undefined && (edu.graduationYear < 1950 || edu.graduationYear > new Date().getFullYear() + 10)) {
+                throw new ApiError(400, `Образование ${index + 1}: некорректный год выпуска`);
+            }
+        });
+    }
+    /**
+     * Проверяет, требует ли изменение модерации
+     */
+    private checkIfModerationRequired(updateData: UpdateUserProfileDto): boolean {
+        const criticalFields = ['specialization', 'education', 'placeWork','firstName', 'lastName'];
+
+        return criticalFields.some(field =>
+            updateData[field as keyof UpdateUserProfileDto] !== undefined
+        );
+    }
 }

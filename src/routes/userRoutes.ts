@@ -59,7 +59,7 @@ router.get("/:id/stats", profileLimiter, (req, res, next) => userController.getU
 // =================== АВТОРИЗОВАННЫЕ РОУТЫ ===================
 // Получить свой профиль (требует авторизации)
 router.get("/me", authMiddleware, (req, res, next) => userController.getMyProfile(req, res, next));
-
+router.post("/update-my-profile",authMiddleware, (req, res, next) => {userController.updateMyProfile(req, res, next)});
 // Проверить, подписан ли на пользователя (требует авторизации)
 router.get("/:id/is-following", authMiddleware, (req, res, next) => userController.checkIsFollowing(req, res, next));
 
