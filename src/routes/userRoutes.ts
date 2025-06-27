@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { UserController } from "@/controllers/UserController";
 import rateLimit from 'express-rate-limit';
-import { authMiddleware } from "@/middlewares/authMiddleWare";
+import {authMiddleware, banCheckMiddleware} from "@/middlewares/authMiddleWare";
 
 const router = Router();
 const userController = new UserController();
@@ -59,15 +59,15 @@ router.get("/:id/stats", profileLimiter, (req, res, next) => userController.getU
 // =================== АВТОРИЗОВАННЫЕ РОУТЫ ===================
 // Получить свой профиль (требует авторизации)
 router.get("/me", authMiddleware, (req, res, next) => userController.getMyProfile(req, res, next));
-router.post("/update-my-profile",authMiddleware, (req, res, next) => {userController.updateMyProfile(req, res, next)});
+router.post("/update-my-profile",authMiddleware,banCheckMiddleware, (req, res, next) => {userController.updateMyProfile(req, res, next)});
 // Проверить, подписан ли на пользователя (требует авторизации)
 router.get("/:id/is-following", authMiddleware, (req, res, next) => userController.checkIsFollowing(req, res, next));
 
 // Подписаться на пользователя (требует авторизации + лимиты)
-router.post("/:id/follow", authMiddleware, followLimiter, (req, res, next) => userController.followUser(req, res, next));
+router.post("/:id/follow", authMiddleware,banCheckMiddleware, followLimiter, (req, res, next) => userController.followUser(req, res, next));
 
 // Отписаться от пользователя (требует авторизации + лимиты)
-router.delete("/:id/follow", authMiddleware, followLimiter, (req, res, next) => userController.unfollowUser(req, res, next));
+router.delete("/:id/follow", authMiddleware,banCheckMiddleware, followLimiter, (req, res, next) => userController.unfollowUser(req, res, next));
 
 // =================== РАСШИРЕННЫЕ РОУТЫ ===================
 // Получить рекомендации по подпискам (авторизованные пользователи)

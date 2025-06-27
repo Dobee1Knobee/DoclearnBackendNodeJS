@@ -2,7 +2,7 @@
 import { Router } from "express";
 import { PostController } from "@/controllers/PostController";
 import rateLimit from 'express-rate-limit';
-import {authMiddleware} from "@/middlewares/authMiddleWare";
+import {authMiddleware, banCheckMiddleware} from "@/middlewares/authMiddleWare";
 
 const router = Router();
 const postController = new PostController();
@@ -44,7 +44,7 @@ router.get("/specialty/:specialty", postController.getPostsBySpecialty);
 
 // =================== АВТОРИЗОВАННЫЕ РОУТЫ ===================
 // Создание поста (требует авторизации + лимиты)
-router.post("/", authMiddleware, createPostLimiter, postController.createPost);
+router.post("/", authMiddleware,banCheckMiddleware, createPostLimiter, postController.createPost);
 
 // Мои посты (требует авторизации)
 router.get("/my/posts", authMiddleware, postController.getMyPosts);
@@ -53,13 +53,13 @@ router.get("/my/posts", authMiddleware, postController.getMyPosts);
 router.get("/user/:userId", postController.getUserPosts);
 
 // Обновление поста (требует авторизации)
-router.put("/:id", authMiddleware, postController.updatePost);
+router.put("/:id", banCheckMiddleware,authMiddleware, postController.updatePost);
 
 // Удаление поста (требует авторизации)
-router.delete("/:id", authMiddleware, postController.deletePost);
+router.delete("/:id", authMiddleware, banCheckMiddleware,postController.deletePost);
 
 // Лайк/анлайк поста (требует авторизации)
-router.post("/:id/like", authMiddleware, postController.likePost);
-router.delete("/:id/like", authMiddleware, postController.unlikePost);
+router.post("/:id/like", authMiddleware,banCheckMiddleware, postController.likePost);
+router.delete("/:id/like", authMiddleware,banCheckMiddleware, postController.unlikePost);
 
 export default router;

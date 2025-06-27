@@ -91,8 +91,8 @@ export const adminMiddleware = async (
             return;
         }
 
-        // Проверяем роль администратора
-        if (req.user.role !== 'admin') {
+        // Проверяем роль администратора или владельца
+        if (!['admin', 'owner'].includes(req.user.role)) {
             res.status(403).json({
                 success: false,
                 error: "Недостаточно прав доступа",
@@ -118,6 +118,49 @@ export const adminMiddleware = async (
         res.status(500).json({
             success: false,
             error: "Ошибка проверки прав доступа"
+        });
+    }
+};
+
+export const banCheckMiddleware = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        // Проверяем что пользователь авторизован
+        if (!req.user) {
+            res.status(401).json({
+                success: false,
+                error: "Пользователь не авторизован",
+                code: "NOT_AUTHENTICATED"
+            });
+            return;
+        }
+
+        // Проверяем забанен ли пользователь
+        const user = await UserModel.findById(req.user.id).select('isBanned banReason bannedAt').lean();
+
+        if (user?.isBanned) {
+            res.status(403).json({
+                success: false,
+                error: "Ваш аккаунт заблокирован",
+                code: "USER_BANNED",
+                details: {
+                    reason: user.banReason,
+                    bannedAt: user.bannedAt
+                }
+            });
+            return;
+        }
+
+        next();
+
+    } catch (error) {
+        console.error("Ban check middleware error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Ошибка проверки статуса аккаунта"
         });
     }
 };

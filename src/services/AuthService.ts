@@ -33,8 +33,8 @@ export class AuthService {
             password: hashedPassword,
             firstName: dto.firstName,
             lastName: dto.lastName,
-            location: dto.location || 'Не указано',  // добавили
-            experience: dto.experience || 'Не указан', // добавили
+            location: dto.location || 'Не указано',
+            experience: dto.experience || 'Не указан',
             avatar: dto.avatar,
             specialization: dto.specialization,
             education: dto.education || [],
