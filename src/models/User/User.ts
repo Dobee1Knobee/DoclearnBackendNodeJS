@@ -1,11 +1,10 @@
 import mongoose, { Schema, Types, InferSchemaType, model, Model, Document } from 'mongoose';
 
-// создаём схему
 const userSchema = new Schema({
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
-    location: { type: String },
-    experience: { type: String },
+    location: { type: String, required: true },
+    experience: { type: String},
     specialization: { type: String }, // добавили специализацию
     rating: { type: Number, default: 0 },
     bio: { type: String },
@@ -14,15 +13,16 @@ const userSchema = new Schema({
     birthday: { type: Date, required: true },
     role: {
         type: String,
-        enum: ['student', 'admin', 'user', 'doctor'],
-        default: 'user',
+        enum: ['student', 'admin', 'doctor',"owner"],
+
     },
     placeWork: { type: String },
-    avatar: { type: String, required: true },
+    avatar: { type: String },
     contacts: [{
         type: {
             type: String,
-            enum: ['phone', 'telegram', 'whatsapp', 'website', 'email', 'vk', 'facebook', 'twitter', 'instagram'],
+            label:{type:String},
+            enum: ['phone', 'telegram', 'whatsapp', 'website', 'email',"vk","facebook","twitter","instagram"],            required: true
         },
         value: { type: String, required: true },
         isPublic: { type: Boolean, default: true }
@@ -30,6 +30,7 @@ const userSchema = new Schema({
     education: [{
         institution: { type: String, required: true }, // "Первый МГМУ им. И.М. Сеченова"
         degree: { type: String }, // "Специалитет", "Ординатура"
+        startDate: { type: Date, required: true },
         specialty: { type: String }, // "Лечебное дело"
         graduationYear: { type: Number },
         isCurrently: { type: Boolean, default: false }
@@ -87,12 +88,13 @@ const userSchema = new Schema({
                 isPublic: { type: Boolean }
             }],
             education: [{
-                institution: { type: String },
-                degree: { type: String },
-                specialty: { type: String },
+                institution: { type: String, required: true }, // "Первый МГМУ им. И.М. Сеченова"
+                degree: { type: String }, // "Специалитет", "Ординатура"
+                startDate: { type: Date, required: true },
+                specialty: { type: String }, // "Лечебное дело"
                 graduationYear: { type: Number },
-                isCurrently: { type: Boolean }
-            }]
+                isCurrently: { type: Boolean, default: false }
+            }],
         },
         status: {
             type: String,
@@ -105,7 +107,25 @@ const userSchema = new Schema({
         moderatorComment: { type: String }
     },
 
-    isVerified: { type: Boolean, default: false }
+    isVerified: {
+        user: { type: Boolean, default: false },
+        doctor: { type: Boolean, default: false },
+        student: { type: Boolean, default: false },
+
+    },
+
+    // Система админки и модерации
+    isBanned: { type: Boolean, default: false },
+    banReason: { type: String },
+    bannedAt: { type: Date },
+    bannedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+
+    warnings: [{
+        message: { type: String, required: true },
+        issuedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        issuedAt: { type: Date, default: Date.now },
+        reason: { type: String }
+    }]
 }, {
     timestamps: true // автоматические createdAt/updatedAt
 });
@@ -114,8 +134,6 @@ const userSchema = new Schema({
 export type User = InferSchemaType<typeof userSchema>;
 export type PublicUser = Omit<User, 'password'>;
 
-// Type for MongoDB document (includes _id and other Mongoose methods)
 export type UserDocument = User & Document;
 
-// ВАЖНО: вот тут 👇 указываем generic <User>
 export const UserModel: Model<User> = model<User>('User', userSchema);

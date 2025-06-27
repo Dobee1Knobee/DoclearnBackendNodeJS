@@ -1,13 +1,13 @@
 export interface RegisterDto {
     email: string;
-    avatar: string;
+    avatar?: string;
     password: string;
     firstName: string;
     lastName: string;
-    location: string;
-    experience: string;
+    location?: string;
+    experience?: string;
     birthday: Date;
-    roles: string;
+    role: string;
     education?: Array<{
         institution: string;
         degree?: string;

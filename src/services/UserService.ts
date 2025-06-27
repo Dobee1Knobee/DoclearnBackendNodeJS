@@ -135,7 +135,7 @@ export class UserService {
                     { lastName: searchRegex },
                     { email: searchRegex }
                 ],
-                isVerified: false // Показываем только верифицированных пользователей
+                "isVerified.user": true // Показываем только верифицированных пользователей
             })
                 .select('firstName lastName location experience rating bio email role placeWork contacts education stats isVerified')
                 .limit(limit)
@@ -146,6 +146,7 @@ export class UserService {
             this.handleError(error, "Ошибка при поиске пользователей");
         }
     }
+
 
     /**
      * Получить пользователя без пароля (для внутреннего использования)

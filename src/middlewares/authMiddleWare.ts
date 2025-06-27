@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { UserModel } from "@/models/User/User";
 
 export interface AuthenticatedRequest extends Request {
     user?: {
@@ -70,6 +71,96 @@ export const authMiddleware = async (
         res.status(401).json({
             success: false,
             error: errorMessage
+        });
+    }
+};
+
+export const adminMiddleware = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        // Проверяем что пользователь авторизован
+        if (!req.user) {
+            res.status(401).json({
+                success: false,
+                error: "Пользователь не авторизован",
+                code: "NOT_AUTHENTICATED"
+            });
+            return;
+        }
+
+        // Проверяем роль администратора или владельца
+        if (!['admin', 'owner'].includes(req.user.role)) {
+            res.status(403).json({
+                success: false,
+                error: "Недостаточно прав доступа",
+                code: "INSUFFICIENT_PERMISSIONS"
+            });
+            return;
+        }
+
+        // Дополнительная проверка - не забанен ли админ
+        const adminUser = await UserModel.findById(req.user.id);
+        if (adminUser?.isBanned) {
+            res.status(403).json({
+                success: false,
+                error: "Аккаунт администратора заблокирован"
+            });
+            return;
+        }
+
+        next();
+
+    } catch (error) {
+        console.error("Admin middleware error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Ошибка проверки прав доступа"
+        });
+    }
+};
+
+export const banCheckMiddleware = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        // Проверяем что пользователь авторизован
+        if (!req.user) {
+            res.status(401).json({
+                success: false,
+                error: "Пользователь не авторизован",
+                code: "NOT_AUTHENTICATED"
+            });
+            return;
+        }
+
+        // Проверяем забанен ли пользователь
+        const user = await UserModel.findById(req.user.id).select('isBanned banReason bannedAt').lean();
+
+        if (user?.isBanned) {
+            res.status(403).json({
+                success: false,
+                error: "Ваш аккаунт заблокирован",
+                code: "USER_BANNED",
+                details: {
+                    reason: user.banReason,
+                    bannedAt: user.bannedAt
+                }
+            });
+            return;
+        }
+
+        next();
+
+    } catch (error) {
+        console.error("Ban check middleware error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Ошибка проверки статуса аккаунта"
         });
     }
 };
