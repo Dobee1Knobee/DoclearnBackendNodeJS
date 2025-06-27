@@ -60,6 +60,20 @@ export class UserController {
         }
     }
 
+    async updateMyProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user?.id) {
+                throw new ApiError(401, "Пользователь не аутентифицирован");
+            }
+            const result = await this.userService.updateUserProfile(req.user.id, req.body);
+            res.status(200).json({
+                success: true,
+                data: result
+            })
+        }catch(error) {
+            next(error);
+        }
+    }
     /**
      * Получить подписчиков пользователя
      * GET /api/users/:id/followers
@@ -186,6 +200,7 @@ export class UserController {
             next(error);
         }
     }
+
 
     /**
      * Поиск пользователей

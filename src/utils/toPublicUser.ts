@@ -1,30 +1,38 @@
-// utils/userMapper.ts
-import { User } from "@/models/User/User";
 import { UserDto } from "@/dto/UserDto";
 
-export function mapUserToPublicDto(user: User, isFollowing?: boolean): UserDto {
+export function mapUserToPublicDto(user: any, isFollowing?: boolean): UserDto {
     return {
-        id: (user as any).id || (user as any)._id?.toString() || '',  // ← возвращаем "id", не "_id"
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        birthday: user.birthday,
-        placeWork: user.placeWork || undefined,
-        role: user.role,
-        following: user.following?.map(id => id.toString()) || [],
-        followers: user.followers?.map(id => id.toString()) || [],
+        _id: (user as any)._id || (user as any)._id?.toString() || '',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        specialization: user.specialization || '',
+        location: user.location || '',
+        experience: user.experience || '',
+        rating: user.rating || 0,
+        bio: user.bio,
+        email: user.email || '',
+        birthday: user.birthday || new Date(),
+        placeWork: user.placeWork,
+        avatar: user.avatar || '',
+        contacts: user.contacts || [],
+        education: user.education || [],
+        role: user.role || 'user',
+        following: user.following?.map((id: any) => id.toString()) || [],
+        followers: user.followers?.map((id: any) => id.toString()) || [],
+        joinTo: user.joinTo || [],
         stats: {
             followingCount: user.stats?.followingCount || 0,
             followersCount: user.stats?.followersCount || 0,
             postsCount: user.stats?.postsCount || 0
         },
-        isVerified: user.isVerified,
-        createdAt: user.createdAt,
-        isFollowing // ← опциональное поле для UI
+        isVerified: user.isVerified || false,
+        createdAt: user.createdAt || new Date(),
+        updatedAt: user.updatedAt || new Date(),
+        isFollowing
     };
 }
 
 // Для массивов пользователей
-export function mapUsersToPublicDto(users: User[]): UserDto[] {
+export function mapUsersToPublicDto(users: any[]): UserDto[] {
     return users.map(user => mapUserToPublicDto(user));
 }

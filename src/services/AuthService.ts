@@ -33,12 +33,16 @@ export class AuthService {
             password: hashedPassword,
             firstName: dto.firstName,
             lastName: dto.lastName,
+            location: dto.location || 'Не указано',  // добавили
+            experience: dto.experience || 'Не указан', // добавили
+            avatar: dto.avatar,
+            specialization: dto.specialization,
+            education: dto.education || [],
             birthday: dto.birthday,
             role: "student",
             placeWork: dto.placeWork,
             isVerified: false,
         });
-
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         verificationCodes.set(dto.email, code);
 
@@ -76,7 +80,7 @@ export class AuthService {
         const user: HydratedDocument<User> | null = await UserModel.findOne({ email }).exec();
 
         if (!user || !bcrypt.compareSync(password, user.password as string)) {
-            throw new Error("Неверный логин или пароль");
+            throw new ApiError(400,"Неверный логин или пароль");
         }
 
         if (!user.isVerified) {
@@ -179,7 +183,7 @@ export class AuthService {
             const userEmail = user.email as string;
 
             // ✅ ИСПРАВЬ ССЫЛКУ - добавь токен в URL:
-            const resetLink = `https://doclearn.ru/reset-password?token=${token}`;
+            const resetLink = `http://localhost:3000/reset-password?token=${token}`;
 
             await new EmailService().sendMail(userEmail, "Восстановление пароля",
                 `Перейдите по ссылке, чтобы восстановить пароль: ${resetLink}`);
