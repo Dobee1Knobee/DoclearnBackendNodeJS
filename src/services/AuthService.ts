@@ -39,9 +39,11 @@ export class AuthService {
             specialization: dto.specialization,
             education: dto.education || [],
             birthday: dto.birthday,
-            role: "student",
+            role: dto.role,
             placeWork: dto.placeWork,
-            isVerified: false,
+            "isVerified.user": false,
+            "isVerified.doctor": false,
+
         });
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         verificationCodes.set(dto.email, code);
@@ -132,7 +134,7 @@ export class AuthService {
 
         const user = await UserModel.findOneAndUpdate(
             { email },
-            { isVerified: true },
+            { 'isVerified.user': true },
             { new: true }
         ).exec();
 

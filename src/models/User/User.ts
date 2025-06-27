@@ -4,8 +4,8 @@ import mongoose, { Schema, Types, InferSchemaType, model, Model, Document } from
 const userSchema = new Schema({
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
-    location: { type: String },
-    experience: { type: String },
+    location: { type: String, required: true },
+    experience: { type: String},
     specialization: { type: String }, // добавили специализацию
     rating: { type: Number, default: 0 },
     bio: { type: String },
@@ -18,11 +18,12 @@ const userSchema = new Schema({
         default: 'user',
     },
     placeWork: { type: String },
-    avatar: { type: String, required: true },
+    avatar: { type: String },
     contacts: [{
         type: {
             type: String,
-            enum: ['phone', 'telegram', 'whatsapp', 'website', 'email', 'vk', 'facebook', 'twitter', 'instagram'],
+            enum: ['phone', 'telegram', 'whatsapp', 'linkedin', 'email'],
+            required: true
         },
         value: { type: String, required: true },
         isPublic: { type: Boolean, default: true }
@@ -105,7 +106,23 @@ const userSchema = new Schema({
         moderatorComment: { type: String }
     },
 
-    isVerified: { type: Boolean, default: false }
+    isVerified: {
+        user: { type: Boolean, default: false },
+        doctor: { type: Boolean, default: false }
+    },
+
+    // Система админки и модерации
+    isBanned: { type: Boolean, default: false },
+    banReason: { type: String },
+    bannedAt: { type: Date },
+    bannedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+
+    warnings: [{
+        message: { type: String, required: true },
+        issuedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        issuedAt: { type: Date, default: Date.now },
+        reason: { type: String }
+    }]
 }, {
     timestamps: true // автоматические createdAt/updatedAt
 });

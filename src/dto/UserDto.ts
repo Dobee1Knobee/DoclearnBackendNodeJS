@@ -10,7 +10,7 @@ export interface UserDto {
     birthday: Date;
     placeWork?: string;
     specialization?: string;
-    avatar: string;
+    avatar?: string;
     contacts: Array<{
         type: 'phone' | 'telegram' | 'whatsapp' | 'website' | 'email' | "vk" |"facebook" | "twitter" | "instagram";
         value: string;
