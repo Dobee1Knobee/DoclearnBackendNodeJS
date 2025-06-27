@@ -10,7 +10,31 @@ export class AdminService {
         this.adminRepository = adminRepository||new AdminRepository();
     }
 
+    async addWarning(userId: string, warning: {
+        message: string;
+        issuedBy: string;
+        reason?: string;
+    }): Promise<{message:string}>{
+        try {
+            if (userId === warning.issuedBy) {
+                throw new ApiError(400, "Нельзя выдать предупреждение себе самому");
+            }
 
+            // Проверяем существование пользователя
+            const user = await this.adminRepository.findUserById(userId);
+            if (!user) {
+                throw new ApiError(404, "Пользователь не найден");
+            }
+
+            // Добавляем предупреждение
+            await this.adminRepository.addWarning(userId, warning);
+            return { message: "Пользователь успешно получил предупреждение" };
+
+        } catch (error) {
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(500, "Ошибка при добавлении предупреждения");
+        }
+    }
     async banUser(userId:string,adminId:string,reason:string):Promise<{ message:string } > {
         try {
             if(adminId === userId){
