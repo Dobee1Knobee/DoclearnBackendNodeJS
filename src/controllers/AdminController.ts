@@ -100,7 +100,73 @@ export class AdminController {
                 limit = "20",
                 role,
                 isBanned,
-                isVerified,
+                isUserVerified,
+                isDoctorVerified,
+                search
+            } = req.query;
+
+            console.log('=== CONTROLLER DEBUG ===');
+            console.log('Исходные query параметры:', req.query);
+            console.log('isDoctorVerified тип:', typeof isDoctorVerified, 'значение:', isDoctorVerified);
+
+            // Валидация параметров
+            const pageNum = parseInt(page as string);
+            const limitNum = parseInt(limit as string);
+
+            if (isNaN(pageNum) || pageNum < 1) {
+                res.status(400).json({
+                    success: false,
+                    error: "Некорректный номер страницы"
+                });
+                return;
+            }
+
+            if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+                res.status(400).json({
+                    success: false,
+                    error: "Лимит должен быть от 1 до 100"
+                });
+                return;
+            }
+
+            const filters: any = {};
+            if (role) filters.role = role;
+
+            if (isBanned !== undefined && isBanned !== null) {
+                filters.isBanned = isBanned === 'true';
+            }
+            if (isUserVerified !== undefined && isUserVerified !== null) {
+                filters.isUserVerified = isUserVerified === 'true';
+            }
+            if (isDoctorVerified !== undefined && isDoctorVerified !== null) {
+                filters.isDoctorVerified = isDoctorVerified === 'true';
+            }
+
+            if (search) filters.search = search as string;
+
+
+            const result = await adminService.getAllUsers(adminId, pageNum, limitNum, filters);
+
+            res.status(200).json({
+                success: true,
+                data: result
+            });
+
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Получить пользователей, ожидающих одобрения изменений
+     * GET /api/admin/users/pending-changes
+     */
+    async getUsersPendingChanges(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const adminId = req.user!.id;
+            const {
+                page = "1",
+                limit = "20",
                 search
             } = req.query;
 
@@ -124,14 +190,10 @@ export class AdminController {
                 return;
             }
 
-            // Подготовка фильтров
             const filters: any = {};
-            if (role) filters.role = role;
-            if (isBanned !== undefined) filters.isBanned = isBanned === 'true';
-            if (isVerified !== undefined) filters.isVerified = isVerified === 'true';
             if (search) filters.search = search as string;
 
-            const result = await adminService.getAllUsers(adminId, pageNum, limitNum, filters);
+            const result = await adminService.getUsersPendingChanges(adminId, pageNum, limitNum, filters);
 
             res.status(200).json({
                 success: true,

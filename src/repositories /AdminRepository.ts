@@ -13,6 +13,7 @@ export interface IAdminRepository {
     unbanUser(userId: string): Promise<void>;
     updateUser(userId: string, updateData: any): Promise<User | null>;
     getAllUsers(query: any, skip: number, limit: number): Promise<{ users: User[], total: number }>;
+    getUsersPendingChanges(query: any, skip: number, limit: number): Promise<{ users: User[], total: number }>;
     addWarning(userId: string, warning: {
         message: string;
         issuedBy: string;
@@ -64,16 +65,19 @@ export class AdminRepository implements IAdminRepository {
     async unbanUser(userId: string): Promise<void> {
         try {
             await UserModel.findByIdAndUpdate(userId, {
-                isBanned: false,
-                banReason: undefined,
-                bannedAt: undefined,
-                bannedBy: undefined
+                $set: {
+                    isBanned: false
+                },
+                $unset: {
+                    banReason: "",
+                    bannedAt: "",
+                    bannedBy: ""
+                }
             });
         } catch (error) {
             throw new ApiError(500, "Ошибка при разбане пользователя");
         }
     }
-
     async updateUser(userId: string, updateData: any): Promise<User | null> {
         try {
             const updatedUser = await UserModel.findByIdAndUpdate(
@@ -109,6 +113,30 @@ export class AdminRepository implements IAdminRepository {
             };
         } catch (error) {
             throw new ApiError(500, "Ошибка при получении списка пользователей");
+        }
+    }
+
+    async getUsersPendingChanges(query: any, skip: number, limit: number): Promise<{
+        users: User[];
+        total: number;
+    }> {
+        try {
+            const [users, total] = await Promise.all([
+                UserModel.find(query)
+                    .select('-password')
+                    .skip(skip)
+                    .limit(limit)
+                    .sort({ 'pendingChanges.submittedAt': -1 })
+                    .lean(),
+                UserModel.countDocuments(query)
+            ]);
+
+            return {
+                users: users as User[],
+                total
+            };
+        } catch (error) {
+            throw new ApiError(500, "Ошибка при получении пользователей с ожидающими изменениями");
         }
     }
 

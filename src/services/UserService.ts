@@ -186,8 +186,16 @@ export class UserService {
             this.handleError(error, "Ошибка при получении статистики пользователя");
         }
     }
-// И заменяем updateUserProfile на версию с модерацией:
-    async updateUserProfile(userId: string, updateData: UpdateUserProfileDto): Promise<{ message: string; requiresModeration: boolean }> {
+
+    /**
+     * Обновление профиля с разделением полей на модерируемые и немодерируемые
+     */
+    async updateUserProfile(userId: string, updateData: UpdateUserProfileDto): Promise<{
+        message: string;
+        requiresModeration: boolean;
+        appliedImmediately?: string[];
+        sentToModeration?: string[];
+    }> {
         try {
             // 1. Валидация
             if (!userId || !updateData) {
@@ -206,41 +214,88 @@ export class UserService {
             // 4. Валидация данных
             this.validateUpdateData(updateData);
 
-            // 5. Определяем нужна ли модерация
-            const requiresModeration = this.checkIfModerationRequired(updateData);
+            // 5. Разделяем поля на модерируемые и немодерируемые
+            const { fieldsForModeration, fieldsForImmediateUpdate } = this.separateFields(updateData);
 
-            if (requiresModeration) {
-                // Сохраняем изменения на модерацию
+            const results = {
+                appliedImmediately: [] as string[],
+                sentToModeration: [] as string[]
+            };
+
+            // 6. Обновляем немодерируемые поля сразу
+            if (Object.keys(fieldsForImmediateUpdate).length > 0) {
+                await UserModel.findByIdAndUpdate(
+                    userId,
+                    { ...fieldsForImmediateUpdate },
+                    { new: true, runValidators: true }
+                );
+                results.appliedImmediately = Object.keys(fieldsForImmediateUpdate);
+            }
+
+            // 7. Отправляем модерируемые поля на модерацию
+            if (Object.keys(fieldsForModeration).length > 0) {
                 await UserModel.findByIdAndUpdate(userId, {
                     pendingChanges: {
-                        data: updateData,
+                        data: fieldsForModeration,
                         status: 'pending',
                         submittedAt: new Date()
                     }
                 });
-
-                return {
-                    message: "Изменения отправлены на модерацию",
-                    requiresModeration: true
-                };
-            } else {
-                // Применяем изменения сразу
-                await UserModel.findByIdAndUpdate(
-                    userId,
-                    { ...updateData },
-                    { new: true, runValidators: true }
-                );
-
-                return {
-                    message: "Профиль успешно обновлен",
-                    requiresModeration: false
-                };
+                results.sentToModeration = Object.keys(fieldsForModeration);
             }
+
+            // 8. Формируем ответ
+            const hasModeration = results.sentToModeration.length > 0;
+            const hasImmediate = results.appliedImmediately.length > 0;
+
+            let message = "";
+            if (hasModeration && hasImmediate) {
+                message = `Часть изменений применена сразу (${results.appliedImmediately.join(', ')}), остальные отправлены на модерацию (${results.sentToModeration.join(', ')})`;
+            } else if (hasModeration) {
+                message = `Изменения отправлены на модерацию (${results.sentToModeration.join(', ')})`;
+            } else {
+                message = `Профиль успешно обновлен (${results.appliedImmediately.join(', ')})`;
+            }
+
+            return {
+                message,
+                requiresModeration: hasModeration,
+                appliedImmediately: results.appliedImmediately,
+                sentToModeration: results.sentToModeration
+            };
 
         } catch (error) {
             this.handleError(error, "Ошибка при обновлении профиля");
         }
     }
+
+    /**
+     * Разделяет поля на те, что требуют модерации, и те, что можно обновить сразу
+     */
+    private separateFields(updateData: UpdateUserProfileDto): {
+        fieldsForModeration: Partial<UpdateUserProfileDto>;
+        fieldsForImmediateUpdate: Partial<UpdateUserProfileDto>;
+    } {
+        const moderationFields: (keyof UpdateUserProfileDto)[] = [
+            'specialization', 'education', 'placeWork', 'firstName', 'lastName'
+        ];
+        const immediateFields: (keyof UpdateUserProfileDto)[] = [
+            'location', 'experience', 'bio', 'avatar', 'contacts'
+        ];
+
+        const filterByFields = (fields: (keyof UpdateUserProfileDto)[]) =>
+            Object.fromEntries(
+                Object.entries(updateData).filter(([key]) =>
+                    fields.includes(key as keyof UpdateUserProfileDto)
+                )
+            ) as Partial<UpdateUserProfileDto>;
+
+        return {
+            fieldsForModeration: filterByFields(moderationFields),
+            fieldsForImmediateUpdate: filterByFields(immediateFields)
+        };
+    }
+
 
     /**
      * Проверяет, что в запросе только допустимые поля
@@ -333,15 +388,5 @@ export class UserService {
                 throw new ApiError(400, `Образование ${index + 1}: некорректный год выпуска`);
             }
         });
-    }
-    /**
-     * Проверяет, требует ли изменение модерации
-     */
-    private checkIfModerationRequired(updateData: UpdateUserProfileDto): boolean {
-        const criticalFields = ['specialization', 'education', 'placeWork','firstName', 'lastName'];
-
-        return criticalFields.some(field =>
-            updateData[field as keyof UpdateUserProfileDto] !== undefined
-        );
     }
 }

@@ -30,7 +30,7 @@ const criticalActionLimiter = rateLimit({
 
 // Получить всех пользователей
 router.get("/users", authMiddleware, adminMiddleware, adminController.getAllUsers);
-
+router.get("/users/pending",authMiddleware,adminMiddleware,adminController.getUsersPendingChanges)
 // Получить статистику
 router.get("/stats", authMiddleware, adminMiddleware, adminController.getAdminStats);
 
