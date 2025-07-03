@@ -27,8 +27,14 @@ const postSchema = new Schema({
             minLength: [10, "Пост должен содержать минимум 10 символов"],
             maxLength: [5000, "Пост не может быть длинее 5000 символов"]
         },
-        previewImage: { type: String },
-        images: [{ type: String }],
+        previewImageId: {
+            type: Schema.Types.ObjectId,
+            ref: 'File'
+        },
+        imageIds: [{
+            type: Schema.Types.ObjectId,
+            ref: 'File'
+        }],
         links: [
             {
                 url: { type: String },
@@ -103,7 +109,7 @@ postSchema.pre('save', function(next) {
 
 // Экспорт типов
 export type Post = InferSchemaType<typeof postSchema>;
-export type PublicPost = Omit<Post, "content.images" | "content.links">;
+export type PublicPost = Omit<Post, "content.links">;
 
 // Экспорт модели
 export const PostModel = model<Post>("Post", postSchema);

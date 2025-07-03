@@ -2,15 +2,20 @@ import { User, UserModel } from "@/models/User/User";
 import mongoose from "mongoose";
 import { ApiError } from "@/errors/ApiError";
 import { UserDto } from "@/dto/UserDto";
+import { FileModel } from '@/models/File/File'; // ← ПРОВЕРЬ, есть ли эта строчка?
+
 import { mapUserToPublicDto } from "@/utils/toPublicUser";
 import {IUserRepository, UserRepository} from "@/repositories /UserRepository";
 import {UpdateUserProfileDto} from "@/dto/UpdateUserProfile";
+import FileUploadService from "@/services/FileUploadService";
 
 export class UserService {
     private userRepository: IUserRepository;
+    private fileService: FileUploadService;
 
     constructor(userRepository?: IUserRepository) {
         this.userRepository = userRepository || new UserRepository();
+        this.fileService = new FileUploadService();
     }
 
     /**
@@ -30,6 +35,16 @@ export class UserService {
 
         throw new ApiError(500, defaultMessage);
     }
+    private async getAvatarUrl(avatarId: string): Promise<string | null> {
+        if(!avatarId) return null;
+
+        const avatarFile = await FileModel.findById(avatarId);
+        if(avatarFile){
+            return await this.fileService.getSignedUrl(avatarFile.fileName, 'avatar');
+        }
+
+        return null;
+    }
 
     /**
      * Получить профиль пользователя
@@ -40,25 +55,45 @@ export class UserService {
             if (!result) {
                 throw new ApiError(404, "Пользователь не найден");
             }
-            return mapUserToPublicDto(result);
+            const userWithAvatar = mapUserToPublicDto(result);
+
+            if (result.avatarId) {
+                const avatarUrl = await this.getAvatarUrl(result.avatarId.toString());
+                userWithAvatar.avatarUrl = avatarUrl || undefined;
+            }
+
+            return userWithAvatar;
         } catch (error) {
             this.handleError(error, "Ошибка при получении профиля пользователя");
         }
     }
+
 
     /**
      * Получить список подписчиков пользователя
      */
     async getFollowers(userId: string): Promise<UserDto[]> {
         try {
-            // Сначала проверим, что пользователь существует
             const userExists = await this.userRepository.findByIdForProfile(userId);
             if (!userExists) {
                 throw new ApiError(404, "Пользователь не найден");
             }
 
             const followers = await this.userRepository.findFollowers(userId);
-            return followers.map(user => mapUserToPublicDto(user));
+
+            // Promise.all для обработки всех аватарок параллельно
+            const followersWithAvatars = await Promise.all(
+                followers.map(async (user) => {
+                    const userDto = mapUserToPublicDto(user);
+                    if (user.avatarId) {
+                        const avatarUrl = await this.getAvatarUrl(user.avatarId.toString());
+                        userDto.avatarUrl = avatarUrl || undefined;
+                    }
+                    return userDto;
+                })
+            );
+
+            return followersWithAvatars;
         } catch (error) {
             this.handleError(error, "Ошибка при получении подписчиков");
         }
@@ -76,7 +111,17 @@ export class UserService {
             }
 
             const following = await this.userRepository.findFollowing(userId);
-            return following.map(user => mapUserToPublicDto(user));
+            const followingWithAvatars = await Promise.all(
+                following.map(async (user) => {
+                    const userDto = mapUserToPublicDto(user);
+                    if (user.avatarId) {
+                        const avatarUrl = await this.getAvatarUrl(user.avatarId.toString());
+                        userDto.avatarUrl = avatarUrl || undefined;
+                    }
+                    return userDto;
+                })
+            );
+            return followingWithAvatars;
         } catch (error) {
             this.handleError(error, "Ошибка при получении подписок");
         }
