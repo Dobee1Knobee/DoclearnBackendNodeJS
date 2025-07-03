@@ -9,6 +9,7 @@ import postRoutes from "@/routes/postRoutes";
 import userRoutes from "@/routes/userRoutes";
 import { connectDB } from "./config /db";
 import { errorHandler } from "@/middlewares/errorHandler";
+import adminRoutes from "@/routes/adminRoutes";
 
 const app = express();
 
@@ -31,6 +32,7 @@ async function main() {
         app.use("/auth", authRoutes);
         app.use("/post", postRoutes);
         app.use("/user", userRoutes);
+        app.use("/admin", adminRoutes);
 
         // Обязательно внизу
         app.use(errorHandler);

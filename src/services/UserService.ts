@@ -2,15 +2,20 @@ import { User, UserModel } from "@/models/User/User";
 import mongoose from "mongoose";
 import { ApiError } from "@/errors/ApiError";
 import { UserDto } from "@/dto/UserDto";
+import { FileModel } from '@/models/File/File'; // ← ПРОВЕРЬ, есть ли эта строчка?
+
 import { mapUserToPublicDto } from "@/utils/toPublicUser";
 import {IUserRepository, UserRepository} from "@/repositories /UserRepository";
 import {UpdateUserProfileDto} from "@/dto/UpdateUserProfile";
+import FileUploadService from "@/services/FileUploadService";
 
 export class UserService {
     private userRepository: IUserRepository;
+    private fileService: FileUploadService;
 
     constructor(userRepository?: IUserRepository) {
         this.userRepository = userRepository || new UserRepository();
+        this.fileService = new FileUploadService();
     }
 
     /**
@@ -30,6 +35,16 @@ export class UserService {
 
         throw new ApiError(500, defaultMessage);
     }
+    private async getAvatarUrl(avatarId: string): Promise<string | null> {
+        if(!avatarId) return null;
+
+        const avatarFile = await FileModel.findById(avatarId);
+        if(avatarFile){
+            return await this.fileService.getSignedUrl(avatarFile.fileName, 'avatar');
+        }
+
+        return null;
+    }
 
     /**
      * Получить профиль пользователя
@@ -40,25 +55,45 @@ export class UserService {
             if (!result) {
                 throw new ApiError(404, "Пользователь не найден");
             }
-            return mapUserToPublicDto(result);
+            const userWithAvatar = mapUserToPublicDto(result);
+
+            if (result.avatarId) {
+                const avatarUrl = await this.getAvatarUrl(result.avatarId.toString());
+                userWithAvatar.avatarUrl = avatarUrl || undefined;
+            }
+
+            return userWithAvatar;
         } catch (error) {
             this.handleError(error, "Ошибка при получении профиля пользователя");
         }
     }
+
 
     /**
      * Получить список подписчиков пользователя
      */
     async getFollowers(userId: string): Promise<UserDto[]> {
         try {
-            // Сначала проверим, что пользователь существует
             const userExists = await this.userRepository.findByIdForProfile(userId);
             if (!userExists) {
                 throw new ApiError(404, "Пользователь не найден");
             }
 
             const followers = await this.userRepository.findFollowers(userId);
-            return followers.map(user => mapUserToPublicDto(user));
+
+            // Promise.all для обработки всех аватарок параллельно
+            const followersWithAvatars = await Promise.all(
+                followers.map(async (user) => {
+                    const userDto = mapUserToPublicDto(user);
+                    if (user.avatarId) {
+                        const avatarUrl = await this.getAvatarUrl(user.avatarId.toString());
+                        userDto.avatarUrl = avatarUrl || undefined;
+                    }
+                    return userDto;
+                })
+            );
+
+            return followersWithAvatars;
         } catch (error) {
             this.handleError(error, "Ошибка при получении подписчиков");
         }
@@ -76,7 +111,17 @@ export class UserService {
             }
 
             const following = await this.userRepository.findFollowing(userId);
-            return following.map(user => mapUserToPublicDto(user));
+            const followingWithAvatars = await Promise.all(
+                following.map(async (user) => {
+                    const userDto = mapUserToPublicDto(user);
+                    if (user.avatarId) {
+                        const avatarUrl = await this.getAvatarUrl(user.avatarId.toString());
+                        userDto.avatarUrl = avatarUrl || undefined;
+                    }
+                    return userDto;
+                })
+            );
+            return followingWithAvatars;
         } catch (error) {
             this.handleError(error, "Ошибка при получении подписок");
         }
@@ -186,8 +231,16 @@ export class UserService {
             this.handleError(error, "Ошибка при получении статистики пользователя");
         }
     }
-// И заменяем updateUserProfile на версию с модерацией:
-    async updateUserProfile(userId: string, updateData: UpdateUserProfileDto): Promise<{ message: string; requiresModeration: boolean }> {
+
+    /**
+     * Обновление профиля с разделением полей на модерируемые и немодерируемые
+     */
+    async updateUserProfile(userId: string, updateData: UpdateUserProfileDto): Promise<{
+        message: string;
+        requiresModeration: boolean;
+        appliedImmediately?: string[];
+        sentToModeration?: string[];
+    }> {
         try {
             // 1. Валидация
             if (!userId || !updateData) {
@@ -206,41 +259,88 @@ export class UserService {
             // 4. Валидация данных
             this.validateUpdateData(updateData);
 
-            // 5. Определяем нужна ли модерация
-            const requiresModeration = this.checkIfModerationRequired(updateData);
+            // 5. Разделяем поля на модерируемые и немодерируемые
+            const { fieldsForModeration, fieldsForImmediateUpdate } = this.separateFields(updateData);
 
-            if (requiresModeration) {
-                // Сохраняем изменения на модерацию
+            const results = {
+                appliedImmediately: [] as string[],
+                sentToModeration: [] as string[]
+            };
+
+            // 6. Обновляем немодерируемые поля сразу
+            if (Object.keys(fieldsForImmediateUpdate).length > 0) {
+                await UserModel.findByIdAndUpdate(
+                    userId,
+                    { ...fieldsForImmediateUpdate },
+                    { new: true, runValidators: true }
+                );
+                results.appliedImmediately = Object.keys(fieldsForImmediateUpdate);
+            }
+
+            // 7. Отправляем модерируемые поля на модерацию
+            if (Object.keys(fieldsForModeration).length > 0) {
                 await UserModel.findByIdAndUpdate(userId, {
                     pendingChanges: {
-                        data: updateData,
+                        data: fieldsForModeration,
                         status: 'pending',
                         submittedAt: new Date()
                     }
                 });
-
-                return {
-                    message: "Изменения отправлены на модерацию",
-                    requiresModeration: true
-                };
-            } else {
-                // Применяем изменения сразу
-                await UserModel.findByIdAndUpdate(
-                    userId,
-                    { ...updateData },
-                    { new: true, runValidators: true }
-                );
-
-                return {
-                    message: "Профиль успешно обновлен",
-                    requiresModeration: false
-                };
+                results.sentToModeration = Object.keys(fieldsForModeration);
             }
+
+            // 8. Формируем ответ
+            const hasModeration = results.sentToModeration.length > 0;
+            const hasImmediate = results.appliedImmediately.length > 0;
+
+            let message = "";
+            if (hasModeration && hasImmediate) {
+                message = `Часть изменений применена сразу (${results.appliedImmediately.join(', ')}), остальные отправлены на модерацию (${results.sentToModeration.join(', ')})`;
+            } else if (hasModeration) {
+                message = `Изменения отправлены на модерацию (${results.sentToModeration.join(', ')})`;
+            } else {
+                message = `Профиль успешно обновлен (${results.appliedImmediately.join(', ')})`;
+            }
+
+            return {
+                message,
+                requiresModeration: hasModeration,
+                appliedImmediately: results.appliedImmediately,
+                sentToModeration: results.sentToModeration
+            };
 
         } catch (error) {
             this.handleError(error, "Ошибка при обновлении профиля");
         }
     }
+
+    /**
+     * Разделяет поля на те, что требуют модерации, и те, что можно обновить сразу
+     */
+    private separateFields(updateData: UpdateUserProfileDto): {
+        fieldsForModeration: Partial<UpdateUserProfileDto>;
+        fieldsForImmediateUpdate: Partial<UpdateUserProfileDto>;
+    } {
+        const moderationFields: (keyof UpdateUserProfileDto)[] = [
+            'specialization', 'education', 'placeWork', 'firstName', 'lastName'
+        ];
+        const immediateFields: (keyof UpdateUserProfileDto)[] = [
+            'location', 'experience', 'bio', 'avatar', 'contacts',"birthday"
+        ];
+
+        const filterByFields = (fields: (keyof UpdateUserProfileDto)[]) =>
+            Object.fromEntries(
+                Object.entries(updateData).filter(([key]) =>
+                    fields.includes(key as keyof UpdateUserProfileDto)
+                )
+            ) as Partial<UpdateUserProfileDto>;
+
+        return {
+            fieldsForModeration: filterByFields(moderationFields),
+            fieldsForImmediateUpdate: filterByFields(immediateFields)
+        };
+    }
+
 
     /**
      * Проверяет, что в запросе только допустимые поля
@@ -249,7 +349,7 @@ export class UserService {
         const allowedFields = [
             'firstName', 'lastName', 'location', 'experience',
             'bio', 'placeWork', 'specialization', 'avatar',
-            'contacts', 'education'
+            'contacts', 'education','birthday'
         ];
 
         const receivedFields = Object.keys(updateData);
@@ -333,15 +433,5 @@ export class UserService {
                 throw new ApiError(400, `Образование ${index + 1}: некорректный год выпуска`);
             }
         });
-    }
-    /**
-     * Проверяет, требует ли изменение модерации
-     */
-    private checkIfModerationRequired(updateData: UpdateUserProfileDto): boolean {
-        const criticalFields = ['specialization', 'education', 'placeWork','firstName', 'lastName'];
-
-        return criticalFields.some(field =>
-            updateData[field as keyof UpdateUserProfileDto] !== undefined
-        );
     }
 }

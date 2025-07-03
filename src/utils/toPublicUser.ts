@@ -1,4 +1,4 @@
-import { UserDto } from "@/dto/UserDto";
+import {UserDto} from "@/dto/UserDto";
 
 export function mapUserToPublicDto(user: any, isFollowing?: boolean): UserDto {
     return {
@@ -13,7 +13,8 @@ export function mapUserToPublicDto(user: any, isFollowing?: boolean): UserDto {
         email: user.email || '',
         birthday: user.birthday || new Date(),
         placeWork: user.placeWork,
-        avatar: user.avatar || '',
+        avatarId: user.avatarId || null,        // ← ИЗМЕНЕНО: avatar → avatarId
+        avatarUrl: user.avatarUrl || null,      // ← ДОБАВЛЕНО: для signed URL
         contacts: user.contacts || [],
         education: user.education || [],
         role: user.role || 'user',
@@ -30,9 +31,4 @@ export function mapUserToPublicDto(user: any, isFollowing?: boolean): UserDto {
         updatedAt: user.updatedAt || new Date(),
         isFollowing
     };
-}
-
-// Для массивов пользователей
-export function mapUsersToPublicDto(users: any[]): UserDto[] {
-    return users.map(user => mapUserToPublicDto(user));
 }

@@ -2,6 +2,7 @@ import {AdminRepository, IAdminRepository} from "@/repositories /AdminRepository
 import {ApiError} from "@/errors/ApiError";
 import {UserModel} from "@/models/User/User";
 import {UserDto} from "@/dto/UserDto";
+import {UserForAdminDto, mapUserForAdminModeration} from "@/dto/UserForAdminDto";
 import {mapUserToPublicDto} from "@/utils/toPublicUser";
 
 export class AdminService {
@@ -91,7 +92,9 @@ export class AdminService {
     async getAllUsers(adminId: string, page: number = 1, limit: number = 20, filters?: {
         role?: string;
         isBanned?: boolean;
-        isVerified?: boolean;
+        isUserVerified?: boolean;
+        isDoctorVerified?: boolean;
+
         search?: string;
     }): Promise<{
         users: UserDto[];
@@ -105,7 +108,8 @@ export class AdminService {
             // Применяем фильтры
             if (filters?.role) query.role = filters.role;
             if (filters?.isBanned !== undefined) query.isBanned = filters.isBanned;
-            if (filters?.isVerified !== undefined) query['isVerified.user'] = filters.isVerified;
+            if (filters?.isUserVerified !== undefined) query['isVerified.user'] = filters.isUserVerified;
+            if (filters?.isDoctorVerified !== undefined) query['isVerified.doctor'] = filters.isDoctorVerified;
 
             if (filters?.search) {
                 query.$or = [
@@ -130,6 +134,45 @@ export class AdminService {
             throw new ApiError(500, "Ошибка при получении списка пользователей");
         }
     }
+
+    async getUsersPendingChanges(adminId: string, page: number = 1, limit: number = 20, filters?: {
+        search?: string;
+    }): Promise<{
+        users: UserForAdminDto[];
+        total: number;
+        page: number;
+        totalPages: number;
+    }> {
+        try {
+            const query: any = {
+                'pendingChanges.status': 'pending'
+            };
+
+            // Добавляем поиск если указан
+            if (filters?.search) {
+                query.$or = [
+                    { firstName: { $regex: filters.search, $options: 'i' } },
+                    { lastName: { $regex: filters.search, $options: 'i' } },
+                    { email: { $regex: filters.search, $options: 'i' } }
+                ];
+            }
+
+            const skip = (page - 1) * limit;
+            const result = await this.adminRepository.getUsersPendingChanges(query, skip, limit);
+
+            return {
+                users: result.users.map(user => mapUserForAdminModeration(user)),
+                total: result.total,
+                page,
+                totalPages: Math.ceil(result.total / limit)
+            };
+
+        } catch (error) {
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(500, "Ошибка при получении пользователей с ожидающими изменениями");
+        }
+    }
+
     async editUser(adminId: string, userId: string, updateData: Partial<UserDto>): Promise<UserDto> {
         try {
             const user = await this.adminRepository.findUserById(userId);

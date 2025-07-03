@@ -1,6 +1,7 @@
 import { User, UserModel } from "@/models/User/User";
 import mongoose from "mongoose";
 import { ApiError } from "@/errors/ApiError";
+import { FileModel } from '@/models/File/File'; // ← ПРОВЕРЬ, есть ли эта строчка?
 
 // ✅ Интерфейс с правильными типами
 export interface IUserRepository {
@@ -33,8 +34,9 @@ export class UserRepository implements IUserRepository {
     async findByIdForProfile(id: string): Promise<any | null> {
         try {
             return await UserModel.findById(id)
-                .select('firstName lastName location experience specialization rating bio email role placeWork contacts education stats isVerified createdAt updatedAt')
-                .select('-password')
+                .select('firstName lastName location experience specialization rating bio email role placeWork contacts education stats isVerified createdAt updatedAt avatarId') // добавили avatarId
+                .select('-password') // исключаем пароль
+                .populate('avatarId') // загружаем данные файла
                 .lean();
         } catch (error) {
             return null;

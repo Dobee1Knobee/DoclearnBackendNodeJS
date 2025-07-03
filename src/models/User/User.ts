@@ -1,4 +1,5 @@
 import mongoose, { Schema, Types, InferSchemaType, model, Model, Document } from 'mongoose';
+import { FileModel } from '@/models/File/File'; // ← ПРОВЕРЬ, есть ли эта строчка?
 
 const userSchema = new Schema({
     firstName: { type: String, required: true },
@@ -17,7 +18,10 @@ const userSchema = new Schema({
 
     },
     placeWork: { type: String },
-    avatar: { type: String },
+    avatarId: {
+        type: Schema.Types.ObjectId,
+        ref: 'File'
+    },
     contacts: [{
         type: {
             type: String,
@@ -46,6 +50,7 @@ const userSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "User"
     }],
+
     joinTo: [{
         eventId: { type: Schema.Types.ObjectId, ref: 'Announcement', required: true }, // вернули eventId
         roleEvent: {
@@ -75,10 +80,13 @@ const userSchema = new Schema({
             lastName: { type: String },
             location: { type: String },
             experience: { type: String },
+            documentsIds: [{
+                type: Schema.Types.ObjectId,
+                ref: 'File'
+            }],
             bio: { type: String },
             placeWork: { type: String },
             specialization: { type: String },
-            avatar: { type: String },
             contacts: [{
                 type: {
                     type: String,
