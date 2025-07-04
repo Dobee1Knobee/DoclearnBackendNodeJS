@@ -2,6 +2,8 @@ import { Router } from "express";
 import { UserController } from "@/controllers/UserController";
 import rateLimit from 'express-rate-limit';
 import {authMiddleware, banCheckMiddleware} from "@/middlewares/authMiddleWare";
+import multer from "multer";
+const upload = multer();
 
 const router = Router();
 const userController = new UserController();
@@ -62,7 +64,12 @@ router.get("/me", authMiddleware, (req, res, next) => userController.getMyProfil
 router.post("/update-my-profile",authMiddleware,banCheckMiddleware, (req, res, next) => {userController.updateMyProfile(req, res, next)});
 // Проверить, подписан ли на пользователя (требует авторизации)
 router.get("/:id/is-following", authMiddleware, (req, res, next) => userController.checkIsFollowing(req, res, next));
-
+router.post("/avatar",
+    authMiddleware,
+    banCheckMiddleware,
+    upload.single('avatar'),
+    (req, res, next) => userController.uploadAvatar(req, res, next)
+);
 // Подписаться на пользователя (требует авторизации + лимиты)
 router.post("/:id/follow", authMiddleware,banCheckMiddleware, followLimiter, (req, res, next) => userController.followUser(req, res, next));
 
