@@ -1,6 +1,7 @@
 import { UserService } from "@/services/UserService";
 import { NextFunction, Request, Response } from "express";
 import { ApiError } from "@/errors/ApiError";
+import multer from 'multer';
 
 // Расширяем Request для типизации JWT payload
 interface AuthenticatedRequest extends Request {
@@ -10,14 +11,36 @@ interface AuthenticatedRequest extends Request {
         role: string;
     };
 }
+const upload = multer();
 
 export class UserController {
     private userService: UserService;
-
     constructor() {
         this.userService = new UserService();
     }
 
+    async uploadAvatar(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const userId = req.user?.id;
+
+            if (!userId) {
+                throw new ApiError(401, "Пользователь не аутентифицирован");
+            }
+
+            const file = req.file;
+            if (!file) {
+                throw new ApiError(400, "Файл не загружен");
+            }
+
+            const result = await this.userService.uploadAvatar(userId, file);
+            res.status(200).json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
     /**
      * Получить профиль пользователя по ID
      * GET /api/users/:id/profile

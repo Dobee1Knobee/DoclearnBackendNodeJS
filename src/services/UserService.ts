@@ -2,7 +2,7 @@ import { User, UserModel } from "@/models/User/User";
 import mongoose from "mongoose";
 import { ApiError } from "@/errors/ApiError";
 import { UserDto } from "@/dto/UserDto";
-import { FileModel } from '@/models/File/File'; // ← ПРОВЕРЬ, есть ли эта строчка?
+import { FileModel } from '@/models/File/File';
 
 import { mapUserToPublicDto } from "@/utils/toPublicUser";
 import {IUserRepository, UserRepository} from "@/repositories /UserRepository";
@@ -35,6 +35,7 @@ export class UserService {
 
         throw new ApiError(500, defaultMessage);
     }
+
     private async getAvatarUrl(avatarId: string): Promise<string | null> {
         if(!avatarId) return null;
 
@@ -58,7 +59,7 @@ export class UserService {
             const userWithAvatar = mapUserToPublicDto(result);
 
             if (result.avatarId) {
-                const avatarUrl = await this.getAvatarUrl(result.avatarId.toString());
+                const avatarUrl = await this.getAvatarUrl(result.avatarId._id.toString());
                 userWithAvatar.avatarUrl = avatarUrl || undefined;
             }
 
@@ -67,7 +68,6 @@ export class UserService {
             this.handleError(error, "Ошибка при получении профиля пользователя");
         }
     }
-
 
     /**
      * Получить список подписчиков пользователя
@@ -86,7 +86,7 @@ export class UserService {
                 followers.map(async (user) => {
                     const userDto = mapUserToPublicDto(user);
                     if (user.avatarId) {
-                        const avatarUrl = await this.getAvatarUrl(user.avatarId.toString());
+                        const avatarUrl = await this.getAvatarUrl(user.avatarId._id.toString());
                         userDto.avatarUrl = avatarUrl || undefined;
                     }
                     return userDto;
@@ -115,7 +115,7 @@ export class UserService {
                 following.map(async (user) => {
                     const userDto = mapUserToPublicDto(user);
                     if (user.avatarId) {
-                        const avatarUrl = await this.getAvatarUrl(user.avatarId.toString());
+                        const avatarUrl = await this.getAvatarUrl(user.avatarId._id.toString());
                         userDto.avatarUrl = avatarUrl || undefined;
                     }
                     return userDto;
@@ -182,16 +182,23 @@ export class UserService {
                 ],
                 "isVerified.user": true // Показываем только верифицированных пользователей
             })
-                .select('firstName lastName location experience rating bio email role placeWork contacts education stats isVerified')
+                .select('firstName lastName location experience rating bio email role placeWork contacts education stats isVerified avatarId')
                 .limit(limit)
                 .lean();
 
-            return users.map(user => mapUserToPublicDto(user));
+            const usersRes = await Promise.all(users.map(async (user) => {
+                const userDto = mapUserToPublicDto(user);
+                if(user.avatarId){
+                    const avatarUrl = await this.getAvatarUrl(user.avatarId._id.toString());
+                    userDto.avatarUrl = avatarUrl || undefined;
+                }
+                return userDto;
+            }));
+            return usersRes;
         } catch (error) {
             this.handleError(error, "Ошибка при поиске пользователей");
         }
     }
-
 
     /**
      * Получить пользователя без пароля (для внутреннего использования)
@@ -341,7 +348,6 @@ export class UserService {
         };
     }
 
-
     /**
      * Проверяет, что в запросе только допустимые поля
      */
@@ -433,5 +439,32 @@ export class UserService {
                 throw new ApiError(400, `Образование ${index + 1}: некорректный год выпуска`);
             }
         });
+    }
+
+    /**
+     * Загрузка аватара пользователя
+     */
+    async uploadAvatar(userId: string, file: any): Promise<{ message: string; avatarUrl: string }> {
+        try {
+            const uploadResult = await this.fileService.uploadFile(file, "avatar", userId);
+            const fileRecord = await FileModel.create({
+                fileName: uploadResult.fileName,
+                originalName: file.originalname,
+                fileType: "avatar",
+                userId: userId,
+                size: file.size,
+                mimetype: file.mimetype,
+                uploadedAt: new Date(),
+            });
+
+            await UserModel.findByIdAndUpdate(userId, {
+                avatarId: fileRecord._id
+            });
+
+            const avatarUrl = await this.fileService.getSignedUrl(fileRecord.fileName, "avatar");
+            return { message: "Аватар успешно обновлен", avatarUrl };
+        } catch (error) {
+            this.handleError(error, "Ошибка при загрузке аватара");
+        }
     }
 }
