@@ -102,9 +102,9 @@ const userSchema = new Schema({
                 originalEducationId: { type: String }, // ← НОВОЕ ПОЛЕ: ссылка на ID основного образования
                 institution: { type: String, required: true }, // "Первый МГМУ им. И.М. Сеченова"
                 degree: { type: String }, // "Специалитет", "Ординатура"
-                startDate: { type: Date, required: true },
+                startDate: { type: String, required: true },
                 specialty: { type: String }, // "Лечебное дело"
-                graduationYear: { type: Number },
+                graduationYear: { type: String },
                 isCurrently: { type: Boolean, default: false },
                 documentsId: [{ type: Schema.Types.ObjectId, ref: 'File' }],
                 customId: { type: String, unique: true },
