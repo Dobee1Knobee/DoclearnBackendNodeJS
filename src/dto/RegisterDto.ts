@@ -8,6 +8,12 @@ export interface RegisterDto {
     experience?: string;
     birthday: Date;
     role: string;
+    contacts: Array<{
+        type:string,
+        label:string,
+        value:string,
+        isPublic:false
+    }>;
     education?: Array<{
         institution: string;
         degree?: string;

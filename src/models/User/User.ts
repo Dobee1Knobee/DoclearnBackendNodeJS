@@ -37,7 +37,10 @@ const userSchema = new Schema({
         startDate: { type: Date, required: true },
         specialty: { type: String }, // "Лечебное дело"
         graduationYear: { type: Number },
-        isCurrently: { type: Boolean, default: false }
+        isCurrently: { type: Boolean, default: false },
+        documentsId: [{ type: Schema.Types.ObjectId, ref: 'File' }],
+        customId: { type: String, unique: true },
+        isVerified: { type: Boolean, default: false }
     }],
 
     following: [{
@@ -96,18 +99,21 @@ const userSchema = new Schema({
                 isPublic: { type: Boolean }
             }],
             education: [{
+                originalEducationId: { type: String }, // ← НОВОЕ ПОЛЕ: ссылка на ID основного образования
                 institution: { type: String, required: true }, // "Первый МГМУ им. И.М. Сеченова"
                 degree: { type: String }, // "Специалитет", "Ординатура"
                 startDate: { type: Date, required: true },
                 specialty: { type: String }, // "Лечебное дело"
                 graduationYear: { type: Number },
-                isCurrently: { type: Boolean, default: false }
+                isCurrently: { type: Boolean, default: false },
+                documentsId: [{ type: Schema.Types.ObjectId, ref: 'File' }],
+                customId: { type: String, unique: true },
+                isVerified: { type: Boolean, default: false }
             }],
         },
         status: {
             type: String,
             enum: ['pending', 'approved', 'rejected'],
-            default: 'pending'
         },
         submittedAt: { type: Date, default: Date.now },
         moderatorId: { type: Schema.Types.ObjectId, ref: 'User' },

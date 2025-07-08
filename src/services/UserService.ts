@@ -284,6 +284,7 @@ export class UserService {
                 results.appliedImmediately = Object.keys(fieldsForImmediateUpdate);
             }
 
+
             // 7. Отправляем модерируемые поля на модерацию
             if (Object.keys(fieldsForModeration).length > 0) {
                 await UserModel.findByIdAndUpdate(userId, {
@@ -439,6 +440,101 @@ export class UserService {
                 throw new ApiError(400, `Образование ${index + 1}: некорректный год выпуска`);
             }
         });
+    }
+
+    async uploadEducationDocs(userId: string, file: any, educationId: string): Promise<{message: string}> {
+        try {
+            // 1. Загружаем файл
+            const uploadResult = await this.fileService.uploadFile(file, "document", userId);
+            const fileRecord = await FileModel.create({
+                fileName: uploadResult.fileName,
+                originalName: file.originalname,
+                fileType: "document",
+                userId: userId,
+                size: file.size,
+                mimetype: file.mimetype,
+                uploadedAt: new Date(),
+            });
+
+            // 2. Добавляем документ в основное образование
+            const result = await UserModel.findOneAndUpdate({
+                _id: userId,
+                "education._id": educationId,
+            }, {
+                $push: { "education.$.documentsId": fileRecord._id }
+            });
+
+            // if (!result) {
+            //     throw new ApiError(404, "Образование не найдено");
+            // }
+
+            // 3. Добавляем документ в pendingChanges для модерации
+            await this.addDocumentToPendingChanges(userId, educationId, fileRecord._id);
+
+            return { message: "Диплом успешно загружен и отправлен на модерацию" };
+
+        } catch (error) {
+            this.handleError(error, "Ошибка при загрузке диплома");
+        }
+    }
+
+    /**
+     * Добавляет документ в pendingChanges для модерации
+     */
+    private async addDocumentToPendingChanges(userId: string, educationId: string, fileId: any): Promise<void> {
+        // Получаем текущего пользователя как plain object
+        const user = await UserModel.findById(userId).lean();
+        if (!user) {
+            throw new ApiError(404, "Пользователь не найден");
+        }
+
+        // Проверяем, есть ли уже pendingChanges
+        const currentPendingChanges = user.pendingChanges?.data?.education || [];
+
+        // Ищем существующую запись для этого образования
+        const existingEducationIndex = currentPendingChanges.findIndex(
+            (edu: any) => edu.originalEducationId === educationId
+        );
+
+        let updatedEducation: any[];
+
+        if (existingEducationIndex !== -1) {
+            // Если запись уже есть - добавляем документ к существующим
+            updatedEducation = [...currentPendingChanges];
+            const existingEducation = updatedEducation[existingEducationIndex];
+
+            updatedEducation[existingEducationIndex] = {
+                originalEducationId: educationId,
+                documentsId: [
+                    ...(existingEducation.documentsId || []),
+                    fileId
+                ]
+            };
+        } else {
+            // Если записи нет - создаем новую
+            updatedEducation = [
+                ...currentPendingChanges,
+                {
+                    originalEducationId: educationId,
+                    documentsId: [fileId]
+                }
+            ];
+        }
+
+        // Обновляем pendingChanges
+        const updateData: any = {
+            'pendingChanges.status': 'pending',
+            'pendingChanges.submittedAt': new Date()
+        };
+
+        // Если у пользователя еще нет pendingChanges.data, создаем его
+        if (!user.pendingChanges?.data) {
+            updateData['pendingChanges.data'] = { education: updatedEducation };
+        } else {
+            updateData['pendingChanges.data.education'] = updatedEducation;
+        }
+
+        await UserModel.findByIdAndUpdate(userId, updateData);
     }
 
     /**

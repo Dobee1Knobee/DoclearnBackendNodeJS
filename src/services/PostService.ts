@@ -256,7 +256,7 @@ export class PostService {
 
             content: {
                 text: post.content?.text || "",
-                images: post.content?.images || [],
+                images: (post.content?.imageIds || []).map(id => id.toString()),
                 // Фиксим links - маппим в правильный формат
                 links: (post.content?.links || []).map(link => ({
                     url: link?.url || "",

@@ -41,6 +41,33 @@ export class UserController {
             next(error);
         }
     }
+    async uploadEducationDoc(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const userId = req.user?.id;
+            const educationId = req.query?.educationId as string;
+
+            if (!educationId) {
+                throw new ApiError(400, "ID образования обязателен");
+            }
+
+            if (!userId) {
+                throw new ApiError(401, "Пользователь не аутентифицирован");
+            }
+
+            const file = req.file;
+            if (!file) {
+                throw new ApiError(400, "Файл не загружен");
+            }
+
+            const result = await this.userService.uploadEducationDocs(userId, file,educationId);
+            res.status(200).json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
     /**
      * Получить профиль пользователя по ID
      * GET /api/users/:id/profile

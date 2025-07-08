@@ -26,4 +26,5 @@ export interface UpdateUserProfileDto {
         graduationYear?: number;
         isCurrently: boolean;
     }>;
+    educationForUpload? :{}
 }

@@ -70,6 +70,12 @@ router.post("/avatar",
     upload.single('avatar'),
     (req, res, next) => userController.uploadAvatar(req, res, next)
 );
+router.post("/document",
+    authMiddleware,
+    banCheckMiddleware,
+    upload.single('document'),
+    (req, res, next) => userController.uploadEducationDoc(req, res, next)
+);
 // Подписаться на пользователя (требует авторизации + лимиты)
 router.post("/:id/follow", authMiddleware,banCheckMiddleware, followLimiter, (req, res, next) => userController.followUser(req, res, next));
 
