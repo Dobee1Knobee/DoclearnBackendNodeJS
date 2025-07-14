@@ -30,6 +30,7 @@ export class AuthService {
 
         const newUser = await UserModel.create({
             email: dto.email,
+            defaultAvatarPath : dto.defaultAvatarPath,
             password: hashedPassword,
             firstName: dto.firstName,
             lastName: dto.lastName,

@@ -333,7 +333,7 @@ export class UserService {
             'specialization', 'education', 'placeWork', 'firstName', 'lastName'
         ];
         const immediateFields: (keyof UpdateUserProfileDto)[] = [
-            'location', 'experience', 'bio', 'avatar', 'contacts',"birthday"
+            'location', 'experience', 'bio', 'avatar', 'contacts',"birthday","defaultAvatarPath"
         ];
 
         const filterByFields = (fields: (keyof UpdateUserProfileDto)[]) =>
@@ -356,7 +356,7 @@ export class UserService {
         const allowedFields = [
             'firstName', 'lastName', 'location', 'experience',
             'bio', 'placeWork', 'specialization', 'avatar',
-            'contacts', 'education','birthday'
+            'contacts', 'education','birthday','defaultAvatarPath'
         ];
 
         const receivedFields = Object.keys(updateData);

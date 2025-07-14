@@ -18,6 +18,7 @@ const userSchema = new Schema({
 
     },
     placeWork: { type: String },
+    defaultAvatarPath: { type: String,required: true },
     avatarId: {
         type: Schema.Types.ObjectId,
         ref: 'File'

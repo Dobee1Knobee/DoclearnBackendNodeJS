@@ -1,6 +1,7 @@
 export interface RegisterDto {
     email: string;
     avatar?: string;
+    defaultAvatarPath: string;
     password: string;
     firstName: string;
     lastName: string;
@@ -8,7 +9,7 @@ export interface RegisterDto {
     experience?: string;
     birthday: Date;
     role: string;
-    contacts: Array<{
+    contacts?: Array<{
         type:string,
         label:string,
         value:string,

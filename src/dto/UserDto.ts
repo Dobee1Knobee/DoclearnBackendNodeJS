@@ -2,6 +2,7 @@ export interface UserDto {
     _id: string;
     firstName: string;
     lastName: string;
+    defaultAvatarPath: string;
     location?: string;
     experience?: string;
     rating: number;

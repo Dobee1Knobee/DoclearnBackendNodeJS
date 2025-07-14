@@ -2,6 +2,8 @@ export interface UpdateUserProfileDto {
     // Основная информация
     firstName?: string;
     birthday?: string;
+    defaultAvatarPath?: string;
+
     avatarId?: string;
     lastName?: string;
     location?: string;
