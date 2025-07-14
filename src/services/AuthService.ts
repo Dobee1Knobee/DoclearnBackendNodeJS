@@ -214,34 +214,41 @@ export class AuthService {
             throw new Error("Ошибка при проверке токена")
         }
     }
-
-    async resetPasswordResetToken(token:string,newPassword:string):Promise<void> {
+    async resetPasswordResetToken(token: string, newPassword: string): Promise<void> {
         try {
-            if(!newPassword || newPassword.length < 8) {
-                throw new Error("Пароль должен содержать минимум 8 символов")
+            if (!newPassword || newPassword.length < 8) {
+                throw new Error("Пароль должен содержать минимум 8 символов");
             }
-            const restToken = await PasswordResetToken.findOne({token}).exec();
-            if(!restToken ) {
-                throw new IncorrectOrExpiredTokenError("Некоректный или истекший токен")
+
+            const restToken = await PasswordResetToken.findOne({ token }).exec();
+            if (!restToken) {
+                throw new IncorrectOrExpiredTokenError("Некорректный или истекший токен");
             }
-            if(restToken.expiresAt < new Date()){
-                await PasswordResetToken.deleteOne({token});
-                throw  new Error("Токен истек")
+
+            if (restToken.expiresAt < new Date()) {
+                await PasswordResetToken.deleteOne({ token });
+                throw new Error("Токен истек");
             }
+
             const user = await UserModel.findById(restToken.userId).exec();
-            if(!user) {
-                await PasswordResetToken.deleteOne({token});
-                throw new Error("Пользователь не найден")
+            if (!user) {
+                await PasswordResetToken.deleteOne({ token });
+                throw new Error("Пользователь не найден");
             }
-            user.password = bcrypt.hashSync(newPassword, 12);
-            await user.save();
-            await PasswordResetToken.deleteMany({userId:restToken.userId});
-        }catch(err){
+
+            // Обновляем только пароль, минуя валидацию других полей
+            await UserModel.findByIdAndUpdate(
+                restToken.userId,
+                { password: bcrypt.hashSync(newPassword, 12) },
+                { runValidators: false } // Отключаем валидацию
+            );
+
+            await PasswordResetToken.deleteMany({ userId: restToken.userId });
+        } catch (err) {
             if (err instanceof Error) {
                 throw err;
             }
             throw new Error("Неизвестная ошибка при сбросе пароля");
-
         }
     }
 

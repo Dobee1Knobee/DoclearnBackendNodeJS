@@ -25,9 +25,9 @@ const userSchema = new Schema({
     contacts: [{
         type: {
             type: String,
-            label:{type:String},
             enum: ['phone', 'telegram', 'whatsapp', 'website', 'email',"vk","facebook","twitter","instagram"],            required: true
         },
+        label:{type:String},
         value: { type: String, required: true },
         isPublic: { type: Boolean, default: true }
     }],

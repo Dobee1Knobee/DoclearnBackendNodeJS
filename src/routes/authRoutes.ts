@@ -21,7 +21,6 @@ const authLimiter = rateLimit({
 
 const passwordResetLimiter = rateLimit({
     ...baseLimiterConfig,
-    max: 3, // максимум 3 запроса на сброс пароля за 15 минут
     message: {
         error: "Слишком много запросов на сброс пароля. Попробуйте позже."
     },
