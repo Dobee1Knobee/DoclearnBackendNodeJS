@@ -46,6 +46,16 @@ export class UserService {
 
         return null;
     }
+    private async getDocumentUrl(documentId: string): Promise<string | null> {
+        if(!documentId) return null;
+
+        const documentFile = await FileModel.findById(documentId);
+        if(documentFile){
+            return await this.fileService.getSignedUrl(documentFile.fileName, 'documentProfile');
+        }
+
+        return null;
+    }
 
     /**
      * Получить профиль пользователя
@@ -63,10 +73,19 @@ export class UserService {
                 userWithAvatar.avatarUrl = avatarUrl || undefined;
             }
 
+
             return userWithAvatar;
         } catch (error) {
             this.handleError(error, "Ошибка при получении профиля пользователя");
         }
+    }
+
+
+    /**
+     * Получить документы пользователя
+     */
+    async getDocuments(userId: string): Promise<void> {
+
     }
 
     /**
@@ -554,7 +573,8 @@ export class UserService {
             });
 
             await UserModel.findByIdAndUpdate(userId, {
-                avatarId: fileRecord._id
+                avatarId: fileRecord._id,
+                defaultAvatarPath:""
             });
 
             const avatarUrl = await this.fileService.getSignedUrl(fileRecord.fileName, "avatar");
@@ -563,4 +583,45 @@ export class UserService {
             this.handleError(error, "Ошибка при загрузке аватара");
         }
     }
+    async uploadDocumentsToProfile(
+        userId: string,
+        file: any,
+        category: string = 'other',
+        label?: string,
+        isPublic: boolean = true
+    ): Promise<{ message: string }> {
+        try {
+            const uploadResult = await this.fileService.uploadFile(file, "documentProfile", userId);
+
+            const fileRecord = await FileModel.create({
+                fileName: uploadResult.fileName,
+                originalName: file.originalname,
+                fileType: "documentProfile",
+                userId: userId,
+                size: file.size,
+                mimetype: file.mimetype,
+                uploadedAt: new Date(),
+            });
+
+            await UserModel.findByIdAndUpdate(userId, {
+                $push: {
+                    documents: {
+                        file: fileRecord._id,
+                        category,
+                        label: label || '',
+                        isPublic,
+                        uploadedAt: new Date()
+                    }
+                }
+            });
+
+                return {   message: `Документы загружены в категорию: ${category} и они ${isPublic ? '' : 'не '}видны пользователям`};
+
+        } catch (error) {
+            this.handleError(error, "Ошибка при загрузке документов в профиль");
+        }
+    }
+
+
+
 }

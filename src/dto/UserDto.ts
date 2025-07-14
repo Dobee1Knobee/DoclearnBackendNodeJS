@@ -2,6 +2,14 @@ export interface UserDto {
     _id: string;
     firstName: string;
     lastName: string;
+    documents: Array<{
+        file:string,
+        category:{
+            type:string
+        }
+        label?:string
+        isPublic:boolean
+    }>;
     defaultAvatarPath: string;
     location?: string;
     experience?: string;

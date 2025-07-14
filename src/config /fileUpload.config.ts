@@ -13,6 +13,13 @@ const FILE_CONFIGS = {
         signedUrlExpiry: 5 * 60 * 1000, // 5 минут
 
     },
+    documentProfile: {
+        maxSize: 10 * 1024 * 1024,
+        types: ["application/pdf", "image/png", "image/jpeg"],
+        folder: "documentsProfile",
+        signedUrlExpiry: 5 * 60 * 1000, // 15 минут
+
+    },
     postImage: {
         maxSize: 10 * 1024 * 1024,
         types: ["image/png", "image/jpeg"],

@@ -18,6 +18,8 @@ export function mapUserToPublicDto(user: any, isFollowing?: boolean): UserDto {
         avatarUrl: user.avatarUrl || null,      // ← ДОБАВЛЕНО: для signed URL
         contacts: user.contacts || [],
         education: user.education || [],
+        documents: user.documents ||[],
+
         role: user.role || 'user',
         following: user.following?.map((id: any) => id.toString()) || [],
         followers: user.followers?.map((id: any) => id.toString()) || [],

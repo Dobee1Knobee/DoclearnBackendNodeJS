@@ -15,7 +15,7 @@ const fileSchema = new Schema({
     // Тип файла
     fileType: {
         type: String,
-        enum: ['avatar', 'document', 'postImage'],
+        enum: ['avatar', 'document', 'postImage',"documentProfile"],
         required: true
     },
 

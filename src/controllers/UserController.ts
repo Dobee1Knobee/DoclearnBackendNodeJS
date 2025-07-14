@@ -41,6 +41,30 @@ export class UserController {
             next(error);
         }
     }
+    async uploadDocumentsToProfile(
+        req: AuthenticatedRequest,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            const userId = req.user?.id.toString() as string;
+            const file = req.file;
+            const { category, label, isPublic } = req.body;
+
+            const result = await this.userService.uploadDocumentsToProfile(
+                userId,
+                file,
+                category,
+                label,
+                isPublic
+            );
+
+            res.status(200).json(result); // например, { message: "Документы загружены..." }
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async uploadEducationDoc(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
         try {
             const userId = req.user?.id;

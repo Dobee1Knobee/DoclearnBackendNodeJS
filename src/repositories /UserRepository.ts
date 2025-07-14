@@ -34,7 +34,7 @@ export class UserRepository implements IUserRepository {
     async findByIdForProfile(id: string): Promise<any | null> {
         try {
             return await UserModel.findById(id)
-                .select('firstName lastName location experience birthday specialization rating bio email role placeWork contacts education stats isVerified createdAt updatedAt avatarId defaultAvatarPath') // добавили avatarId
+                .select('firstName lastName location experience birthday specialization rating bio email role placeWork contacts education stats isVerified createdAt updatedAt avatarId defaultAvatarPath documents') // добавили avatarId
                 .select('-password') // исключаем пароль
                 .populate('avatarId') // загружаем данные файла
                 .lean();
@@ -84,110 +84,86 @@ export class UserRepository implements IUserRepository {
     }
 
     async follow(followerId: string, followingId: string): Promise<void> {
+        if (followerId === followingId) {
+            throw new ApiError(400, "Нельзя подписаться на себя");
+        }
+
+        const session = await mongoose.startSession();
         try {
-            // Валидация входных параметров
-            if (followerId === followingId) {
-                throw new ApiError(400, "Нельзя подписаться на себя");
-            }
+            await session.withTransaction(async () => {
+                const followerUpdate = await UserModel.updateOne(
+                    { _id: followerId },
+                    {
+                        $addToSet: { following: followingId }
+                    }
+                ).session(session);
 
-            // Проверяем существование пользователей
-            const follower = await UserModel.findById(followerId);
-            const toFollow = await UserModel.findById(followingId);
+                const followedUpdate = await UserModel.updateOne(
+                    { _id: followingId },
+                    {
+                        $addToSet: { followers: followerId }
+                    }
+                ).session(session);
 
-            if (!follower || !toFollow) {
-                throw new ApiError(404, "Пользователь не найден");
-            }
+                // Обновим счётчики только если действительно добавилось
+                if (followerUpdate.modifiedCount > 0 && followedUpdate.modifiedCount > 0) {
+                    await UserModel.updateOne(
+                        { _id: followerId },
+                        { $inc: { "stats.followingCount": 1 } }
+                    ).session(session);
 
-            // Проверяем что ещё не подписан
-            const alreadyFollowing = await this.isFollowing(followerId, followingId);
-            if (alreadyFollowing) {
-                throw new ApiError(400, "Вы уже подписаны на этого пользователя");
-            }
-
-            // Выполняем подписку в транзакции
-            const session = await mongoose.startSession();
-
-            try {
-                await session.withTransaction(async () => {
-                    // Добавляем подписку
-                    await UserModel.updateOne({
-                        _id: followerId
-                    }, {
-                        $push: { following: followingId },
-                        $inc: { "stats.followingCount": 1 }
-                    }).session(session);
-
-                    // Добавляем подписчика
-                    await UserModel.updateOne({
-                        _id: followingId
-                    }, {
-                        $push: { followers: followerId },
-                        $inc: { "stats.followersCount": 1 }
-                    }).session(session);
-                });
-            } finally {
-                await session.endSession();
-            }
-
+                    await UserModel.updateOne(
+                        { _id: followingId },
+                        { $inc: { "stats.followersCount": 1 } }
+                    ).session(session);
+                }
+            });
         } catch (error) {
-            if (error instanceof ApiError) {
-                throw error;
-            }
             throw new ApiError(500, "Ошибка при подписке");
+        } finally {
+            await session.endSession();
         }
     }
 
     async unfollow(followerId: string, followingId: string): Promise<void> {
+        if (followerId === followingId) {
+            throw new ApiError(400, "Нельзя отписаться от себя");
+        }
+
+        const session = await mongoose.startSession();
         try {
-            // Валидация входных параметров
-            if (followerId === followingId) {
-                throw new ApiError(400, "Нельзя отписаться от себя");
-            }
+            await session.withTransaction(async () => {
+                const followerUpdate = await UserModel.updateOne(
+                    { _id: followerId },
+                    {
+                        $pull: { following: followingId }
+                    }
+                ).session(session);
 
-            // Проверяем существование пользователей
-            const follower = await UserModel.findById(followerId);
-            const toFollow = await UserModel.findById(followingId);
+                const followedUpdate = await UserModel.updateOne(
+                    { _id: followingId },
+                    {
+                        $pull: { followers: followerId }
+                    }
+                ).session(session);
 
-            if (!follower || !toFollow) {
-                throw new ApiError(404, "Пользователь не найден");
-            }
+                if (followerUpdate.modifiedCount > 0 && followedUpdate.modifiedCount > 0) {
+                    await UserModel.updateOne(
+                        { _id: followerId },
+                        { $inc: { "stats.followingCount": -1 } }
+                    ).session(session);
 
-            // Проверяем что подписка существует
-            const isFollowing = await this.isFollowing(followerId, followingId);
-            if (!isFollowing) {
-                throw new ApiError(400, "Вы не подписаны на этого пользователя");
-            }
-
-            // Выполняем отписку в транзакции
-            const session = await mongoose.startSession();
-
-            try {
-                await session.withTransaction(async () => {
-                    // Убираем подписку
-                    await UserModel.updateOne({
-                        _id: followerId,
-                    }, {
-                        $pull: { following: followingId },
-                        $inc: { "stats.followingCount": -1 }
-                    }).session(session);
-
-                    // Убираем подписчика
-                    await UserModel.updateOne({
-                        _id: followingId,
-                    }, {
-                        $pull: { followers: followerId },
-                        $inc: { "stats.followersCount": -1 }
-                    }).session(session);
-                });
-            } finally {
-                await session.endSession();
-            }
-
+                    await UserModel.updateOne(
+                        { _id: followingId },
+                        { $inc: { "stats.followersCount": -1 } }
+                    ).session(session);
+                }
+            });
         } catch (error) {
-            if (error instanceof ApiError) {
-                throw error;
-            }
             throw new ApiError(500, "Ошибка при отписке");
+        } finally {
+            await session.endSession();
         }
     }
+
 }

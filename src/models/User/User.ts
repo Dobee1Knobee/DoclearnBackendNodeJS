@@ -26,11 +26,22 @@ const userSchema = new Schema({
     contacts: [{
         type: {
             type: String,
-            enum: ['phone', 'telegram', 'whatsapp', 'website', 'email',"vk","facebook","twitter","instagram"],            required: true
+            enum: ['phone', 'telegram', 'whatsapp', 'website', 'email',"vk","facebook","twitter","instagram"],required: true
         },
         label:{type:String},
         value: { type: String, required: true },
         isPublic: { type: Boolean, default: true }
+    }],
+    documents: [{
+        file: { type: Schema.Types.ObjectId, ref: 'File', required: true },
+        category: {
+            type: String,
+            enum: ['diploma', 'certificate', 'license', 'id', 'other'],
+            required: true
+        },
+        label: { type: String },
+        isPublic: { type: Boolean, default: true },
+        uploadedAt: { type: Date, default: Date.now }
     }],
     education: [{
         institution: { type: String, required: true }, // "Первый МГМУ им. И.М. Сеченова"
