@@ -48,22 +48,28 @@ export class UserController {
     ): Promise<void> {
         try {
             const userId = req.user?.id;
+
+            if (!userId) {
+                throw new ApiError(401, "Пользователь не аутентифицирован");
+            }
+
             const file = req.file;
             const { category, label, isPublic } = req.body;
 
             const result = await this.userService.uploadDocumentsToProfile(
-                userId?.toString(),
+                userId,
                 file,
                 category,
                 label,
                 isPublic
             );
 
-            res.status(200).json(result); // например, { message: "Документы загружены..." }
+            res.status(200).json(result);
         } catch (error) {
             next(error);
         }
     }
+
 
     async uploadEducationDoc(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
         try {
