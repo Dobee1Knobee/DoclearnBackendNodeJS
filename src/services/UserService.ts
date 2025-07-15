@@ -303,13 +303,22 @@ export class UserService {
                 results.appliedImmediately = Object.keys(fieldsForImmediateUpdate);
             }
 
-
-            // 7. Отправляем модерируемые поля на модерацию
+            // 7. Отправляем модерируемые поля на модерацию (НОВАЯ СТРУКТУРА)
             if (Object.keys(fieldsForModeration).length > 0) {
+                // Преобразуем в новую структуру данных
+                const newFormatData: any = {};
+
+                for (const [field, value] of Object.entries(fieldsForModeration)) {
+                    newFormatData[field] = {
+                        value: value,
+                        status: 'pending'
+                    };
+                }
+
                 await UserModel.findByIdAndUpdate(userId, {
                     pendingChanges: {
-                        data: fieldsForModeration,
-                        status: 'pending',
+                        data: newFormatData,           // ✅ Новая структура!
+                        globalStatus: 'pending',       // ✅ Правильное поле!
                         submittedAt: new Date()
                     }
                 });
@@ -498,7 +507,7 @@ export class UserService {
     }
 
     /**
-     * Добавляет документ в pendingChanges для модерации
+     * Добавляет документ в pendingChanges для модерации (ОБНОВЛЕНО ДЛЯ НОВОЙ СТРУКТУРЫ)
      */
     private async addDocumentToPendingChanges(userId: string, educationId: string, fileId: any): Promise<void> {
         // Получаем текущего пользователя как plain object
@@ -507,22 +516,30 @@ export class UserService {
             throw new ApiError(404, "Пользователь не найден");
         }
 
-        // Проверяем, есть ли уже pendingChanges
-        const currentPendingChanges = user.pendingChanges?.data?.education || [];
+        // Проверяем, есть ли уже pendingChanges в новой структуре
+        const currentPendingChanges = user.pendingChanges?.data?.education;
+        let educationForModeration: any[];
+
+        if (currentPendingChanges && typeof currentPendingChanges === 'object' && 'value' in currentPendingChanges) {
+            // Новая структура: education: { value: [...], status: "pending" }
+            educationForModeration = currentPendingChanges.value || [];
+        } else if (Array.isArray(currentPendingChanges)) {
+            // Старая структура: education: [...]
+            educationForModeration = currentPendingChanges;
+        } else {
+            // Нет данных
+            educationForModeration = [];
+        }
 
         // Ищем существующую запись для этого образования
-        const existingEducationIndex = currentPendingChanges.findIndex(
+        const existingEducationIndex = educationForModeration.findIndex(
             (edu: any) => edu.originalEducationId === educationId
         );
 
-        let updatedEducation: any[];
-
         if (existingEducationIndex !== -1) {
             // Если запись уже есть - добавляем документ к существующим
-            updatedEducation = [...currentPendingChanges];
-            const existingEducation = updatedEducation[existingEducationIndex];
-
-            updatedEducation[existingEducationIndex] = {
+            const existingEducation = educationForModeration[existingEducationIndex];
+            educationForModeration[existingEducationIndex] = {
                 originalEducationId: educationId,
                 documentsId: [
                     ...(existingEducation.documentsId || []),
@@ -531,26 +548,31 @@ export class UserService {
             };
         } else {
             // Если записи нет - создаем новую
-            updatedEducation = [
-                ...currentPendingChanges,
-                {
-                    originalEducationId: educationId,
-                    documentsId: [fileId]
-                }
-            ];
+            educationForModeration.push({
+                originalEducationId: educationId,
+                documentsId: [fileId]
+            });
         }
 
-        // Обновляем pendingChanges
+        // Обновляем pendingChanges в новой структуре
         const updateData: any = {
-            'pendingChanges.status': 'pending',
+            'pendingChanges.globalStatus': 'pending',  // ✅ Исправлено!
             'pendingChanges.submittedAt': new Date()
         };
 
         // Если у пользователя еще нет pendingChanges.data, создаем его
         if (!user.pendingChanges?.data) {
-            updateData['pendingChanges.data'] = { education: updatedEducation };
+            updateData['pendingChanges.data'] = {
+                education: {
+                    value: educationForModeration,
+                    status: 'pending'
+                }
+            };
         } else {
-            updateData['pendingChanges.data.education'] = updatedEducation;
+            updateData['pendingChanges.data.education'] = {
+                value: educationForModeration,
+                status: 'pending'
+            };
         }
 
         await UserModel.findByIdAndUpdate(userId, updateData);
@@ -615,13 +637,10 @@ export class UserService {
                 }
             });
 
-                return {   message: `Документы загружены в категорию: ${category} и они ${isPublic ? '' : 'не '}видны пользователям`};
+            return {   message: `Документы загружены в категорию: ${category} и они ${isPublic ? '' : 'не '}видны пользователям`};
 
         } catch (error) {
             this.handleError(error, "Ошибка при загрузке документов в профиль");
         }
     }
-
-
-
 }
