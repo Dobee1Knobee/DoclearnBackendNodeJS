@@ -32,12 +32,11 @@ async function main() {
             allowedHeaders: [
                 "Content-Type",
                 "Authorization",
-                "X-Requested-With",
+                "X-Requested-With",  // Добавлено для iOS
                 "Accept",
-                "Origin",
-                "Cookie"  // Добавлено для Safari
+                "Origin"
             ],
-            optionsSuccessStatus: 200
+            optionsSuccessStatus: 200 // Для старых браузеров
         }));
 
         // 2. Preflight обработка для iOS
@@ -45,47 +44,21 @@ async function main() {
             res.header('Access-Control-Allow-Origin', req.headers.origin);
             res.header('Access-Control-Allow-Credentials', 'true');
             res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-            res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin,Cookie');
+            res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin');
             res.sendStatus(200);
         });
 
-        // 3. Cookie parser
+        // 3. Cookie parser с настройками для iOS
         app.use(cookieParser());
 
         // 4. JSON parser
         app.use(express.json());
 
-        // 5. Safari-specific middleware - ДОБАВЛЕНО
+        // 5. Middleware для установки правильных заголовков для iOS
         app.use((req, res, next) => {
-            const userAgent = req.headers['user-agent'] || '';
-            const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome');
-
-            console.log('🔍 Request info:', {
-                userAgent: userAgent.substring(0, 50),
-                isSafari,
-                url: req.url,
-                method: req.method,
-                cookies: Object.keys(req.cookies || {}),
-                hasToken: !!req.cookies?.token,
-                hasRefreshToken: !!req.cookies?.refreshToken
-            });
-
-            // Для iOS Safari устанавливаем специальные заголовки
+            // Для iOS Safari
             res.header('Access-Control-Allow-Credentials', 'true');
             res.header('Access-Control-Allow-Origin', req.headers.origin);
-
-            if (isSafari) {
-                console.log('🍎 Safari detected - applying Safari-specific headers');
-
-                // Дополнительные заголовки для Safari
-                res.header('Vary', 'Origin');
-                res.header('Access-Control-Expose-Headers', 'Set-Cookie');
-
-                // Принудительно отключаем кэширование для Safari
-                res.header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-                res.header('Pragma', 'no-cache');
-                res.header('Expires', '-1');
-            }
 
             // Предотвращение кэширования для авторизации
             if (req.path.includes('/auth') || req.path.includes('/user')) {
