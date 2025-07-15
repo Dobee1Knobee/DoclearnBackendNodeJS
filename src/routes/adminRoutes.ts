@@ -51,5 +51,5 @@ router.post("/users/:userId/approve-changes", authMiddleware, adminMiddleware, a
 
 // Отклонить изменения профиля
 router.post("/users/:userId/reject-changes", authMiddleware, adminMiddleware, adminActionLimiter, adminController.rejectUserChanges);
-
+router.post("/users/:userId/approveSpecificFields",authMiddleware,adminMiddleware,adminActionLimiter,adminController.approveSpecificFields);
 export default router;

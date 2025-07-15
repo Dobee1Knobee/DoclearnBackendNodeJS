@@ -291,6 +291,46 @@ export class AdminController {
         }
     }
 
+    async approveSpecificFields(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const {userId} = req.params;
+            const adminId = req.user!.id;
+            const fieldsToApprove = req.body.fieldsToApprove;
+            const comment = req.body.comment;
+
+            // Базовая валидация на уровне контроллера
+            if (!userId) {
+                res.status(400).json({ message: "Не передан пользователь для изменений" });
+                return;
+            }
+
+            if (!adminId) {
+                res.status(400).json({ message: "Не удалось получить ID админа" });
+                return;
+            }
+
+            if (!fieldsToApprove || !Array.isArray(fieldsToApprove)) {
+                res.status(400).json({ message: "Не переданы поля для одобрения или неверный формат" });
+                return;
+            }
+
+            // Вызов сервиса
+            const result = await adminService.approveSpecificFields(
+                adminId,
+                userId,
+                fieldsToApprove,
+                comment
+            );
+
+            res.status(200).json({
+                success: true,
+                data: result
+            });
+
+        } catch (error) {
+            next(error); // Передаем в error handler middleware
+        }
+    }
     /**
      * Получить статистику для админ панели
      * GET /api/admin/stats

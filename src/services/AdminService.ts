@@ -145,7 +145,7 @@ export class AdminService {
     }> {
         try {
             const query: any = {
-                'pendingChanges.status': 'pending'
+                'pendingChanges.globalStatus': 'pending'
             };
 
             // Добавляем поиск если указан
@@ -204,7 +204,7 @@ export class AdminService {
                 throw new ApiError(404, "Нет ожидающих изменений для данного пользователя");
             }
 
-            if (user.pendingChanges?.status !== 'pending') {
+            if (user.pendingChanges?.globalStatus !== 'pending') {
                 throw new ApiError(400, "Изменения уже обработаны");
             }
 
@@ -229,7 +229,7 @@ export class AdminService {
                 throw new ApiError(404, "Нет ожидающих изменений для данного пользователя");
             }
 
-            if (user.pendingChanges?.status !== 'pending') {
+            if (user.pendingChanges?.globalStatus !== 'pending') {
                 throw new ApiError(400, "Изменения уже обработаны");
             }
 
@@ -243,6 +243,89 @@ export class AdminService {
         } catch (error) {
             if (error instanceof ApiError) throw error;
             throw new ApiError(500, "Ошибка при отклонении изменений");
+        }
+    }
+    async approveSpecificFields(
+        adminId: string,
+        userId: string,
+        fieldsToApprove: string[],
+        comment?: string
+    ): Promise<{ message: string }> {
+        try {
+            // 1. Валидация входных данных
+            if (!fieldsToApprove || fieldsToApprove.length === 0) {
+                throw new ApiError(400, "Не указаны поля для одобрения");
+            }
+
+            // 2. Получение пользователей
+            const [user, admin] = await Promise.all([
+                this.adminRepository.getUserWithPendingChanges(userId),
+                this.adminRepository.findUserById(adminId)
+            ]);
+
+            // 3. Проверки существования
+            if (!user) {
+                throw new ApiError(404, "Пользователь с ожидающими изменениями не найден");
+            }
+
+            if (!admin) {
+                throw new ApiError(404, "Админ не найден");
+            }
+
+            // 4. Проверка прав админа
+            if (admin.role !== "admin" && admin.role !== "owner") {
+                throw new ApiError(403, "Недостаточно прав для одобрения изменений");
+            }
+
+            // 5. Проверка состояния изменений
+            if (user.pendingChanges?.globalStatus !== 'pending') {
+                throw new ApiError(400, "Изменения уже обработаны");
+            }
+
+            // 6. Валидация полей для одобрения
+            const pendingData = user.pendingChanges.data;
+            if (!pendingData) {
+                throw new ApiError(400, "Нет данных для одобрения");
+            }
+
+            // Проверяем, что все запрашиваемые поля существуют и имеют статус pending
+            const invalidFields = fieldsToApprove.filter(field => {
+                const fieldData = pendingData[field];
+                return !fieldData ||
+                    typeof fieldData !== 'object' ||
+                    !('value' in fieldData) ||
+                    !('status' in fieldData);
+            });
+
+            if (invalidFields.length > 0) {
+                throw new ApiError(400, `Поля не найдены в ожидающих изменениях: ${invalidFields.join(', ')}`);
+            }
+
+            // Проверяем, что поля еще не обработаны
+            const alreadyProcessedFields = fieldsToApprove.filter(field => {
+                const fieldData = pendingData[field];
+                return fieldData.status !== 'pending';
+            });
+
+            if (alreadyProcessedFields.length > 0) {
+                throw new ApiError(400, `Поля уже обработаны: ${alreadyProcessedFields.join(', ')}`);
+            }
+
+            // 7. Вызов repository для одобрения конкретных полей
+            await this.adminRepository.approveSpecificChanges(userId, fieldsToApprove, {
+                moderatorId: adminId,
+                moderatorComment: comment
+            });
+
+            // 8. Формирование ответа
+            const approvedFieldsText = fieldsToApprove.join(', ');
+            return {
+                message: `Поля успешно одобрены: ${approvedFieldsText}`
+            };
+
+        } catch (error) {
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(500, "Ошибка при частичном одобрении изменений");
         }
     }
 }
