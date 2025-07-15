@@ -3,6 +3,7 @@ export interface UpdateUserProfileDto {
     firstName?: string;
     birthday?: string;
     defaultAvatarPath?: string;
+    middleName?: string,
 
     avatarId?: string;
     lastName?: string;

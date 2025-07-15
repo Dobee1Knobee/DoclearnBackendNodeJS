@@ -2,6 +2,7 @@ export interface UserForAdminDto {
     _id: string;
     firstName: string;
     lastName: string;
+    middleName?: string;
     email: string;
     role?: string;
     pendingChanges: {

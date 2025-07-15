@@ -4,6 +4,7 @@ export function mapUserToPublicDto(user: any, isFollowing?: boolean): UserDto {
     return {
         _id: (user as any)._id || (user as any)._id?.toString() || '',
         firstName: user.firstName || '',
+        middleName: user.middleName || '',
         lastName: user.lastName || '',
         defaultAvatarPath : user.defaultAvatarPath || '',
         specialization: user.specialization || '',

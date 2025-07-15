@@ -5,6 +5,8 @@ export interface RegisterDto {
     password: string;
     firstName: string;
     lastName: string;
+    middleName?: string,
+
     location?: string;
     experience?: string;
     birthday: Date;

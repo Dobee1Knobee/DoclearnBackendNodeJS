@@ -2,6 +2,7 @@ export interface UserDto {
     _id: string;
     firstName: string;
     lastName: string;
+    middleName?: string;
     documents: Array<{
         file:string,
         category:{

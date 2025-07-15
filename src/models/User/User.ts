@@ -3,6 +3,7 @@ import { FileModel } from '@/models/File/File'; // ← ПРОВЕРЬ, есть 
 
 const userSchema = new Schema({
     firstName: { type: String, required: true },
+    middleName: { type: String},
     lastName: { type: String, required: true },
     location: { type: String, required: true },
     experience: { type: String},
@@ -14,7 +15,7 @@ const userSchema = new Schema({
     birthday: { type: Date, required: true },
     role: {
         type: String,
-        enum: ['student', 'admin', 'doctor',"owner"],
+        enum: ['student', 'admin', 'doctor',"owner",],
 
     },
     placeWork: { type: String },
@@ -26,7 +27,8 @@ const userSchema = new Schema({
     contacts: [{
         type: {
             type: String,
-            enum: ['phone', 'telegram', 'whatsapp', 'website', 'email',"vk","facebook","twitter","instagram"],required: true
+            enum: ['phone', 'telegram', 'whatsapp', 'website', 'email',"vk","facebook","twitter","instagram"],
+            required: true
         },
         label:{type:String},
         value: { type: String, required: true },
@@ -91,41 +93,12 @@ const userSchema = new Schema({
     // Система модерации изменений профиля
     pendingChanges: {
         data: {
-            firstName: { type: String },
-            lastName: { type: String },
-            location: { type: String },
-            experience: { type: String },
-            documentsIds: [{
-                type: Schema.Types.ObjectId,
-                ref: 'File'
-            }],
-            bio: { type: String },
-            placeWork: { type: String },
-            specialization: { type: String },
-            contacts: [{
-                type: {
-                    type: String,
-                    enum: ['phone', 'telegram', 'whatsapp', 'website', 'email', 'vk', 'facebook', 'twitter', 'instagram']
-                },
-                value: { type: String },
-                isPublic: { type: Boolean }
-            }],
-            education: [{
-                originalEducationId: { type: String }, // ← НОВОЕ ПОЛЕ: ссылка на ID основного образования
-                institution: { type: String, required: true }, // "Первый МГМУ им. И.М. Сеченова"
-                degree: { type: String }, // "Специалитет", "Ординатура"
-                startDate: { type: String, required: true },
-                specialty: { type: String }, // "Лечебное дело"
-                graduationYear: { type: String },
-                isCurrently: { type: Boolean, default: false },
-                documentsId: [{ type: Schema.Types.ObjectId, ref: 'File' }],
-                customId: { type: String, unique: true },
-                isVerified: { type: Boolean, default: false }
-            }],
-        },
-        status: {
+            type: Schema.Types.Mixed
+        }, // Гибкая структура для хранения: { fieldName: { value: any, status: "pending"|"approved"|"rejected" } }
+        globalStatus: {
             type: String,
-            enum: ['pending', 'approved', 'rejected'],
+            enum: ['pending', 'approved', 'rejected', 'partial'], // добавили 'partial' для случаев когда одни поля одобрены, другие - нет
+            default: 'pending'
         },
         submittedAt: { type: Date, default: Date.now },
         moderatorId: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -161,5 +134,15 @@ export type User = InferSchemaType<typeof userSchema>;
 export type PublicUser = Omit<User, 'password'>;
 
 export type UserDocument = User & Document;
+
+// Типы для новой структуры pendingChanges
+export interface PendingChangeField {
+    value: any;
+    status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface PendingChangesData {
+    [fieldName: string]: PendingChangeField;
+}
 
 export const UserModel: Model<User> = model<User>('User', userSchema);
