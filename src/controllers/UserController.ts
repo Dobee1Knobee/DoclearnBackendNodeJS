@@ -47,12 +47,12 @@ export class UserController {
         next: NextFunction
     ): Promise<void> {
         try {
-            const userId = req.user?.id.toString() as string;
+            const userId = req.user?.id;
             const file = req.file;
             const { category, label, isPublic } = req.body;
 
             const result = await this.userService.uploadDocumentsToProfile(
-                userId,
+                userId?.toString(),
                 file,
                 category,
                 label,

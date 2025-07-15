@@ -129,7 +129,7 @@ export class AuthController {
         try {
             const {token,newPassword} = req.body;
             if (!token || !newPassword) {
-                 res.status(400).json({error:"Токен и новый пароль - обязательны"});
+                res.status(400).json({error:"Токен и новый пароль - обязательны"});
                 return
             }
             await authService.resetPasswordResetToken(token,newPassword);

@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 import express from "express";
-import cors from "cors"; // ✅ Добавили cors
+import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import authRoutes from "@/routes/authRoutes";
@@ -19,15 +19,35 @@ async function main() {
 
         app.use(cookieParser());
 
-        // ✅ Разрешаем CORS отовсюду (на время разработки)
+        // ✅ Исправленные CORS настройки для production
         app.use(cors({
-            origin: ["http://localhost:3000", "http://doclearn.ru"],
-            credentials: true,
+            origin: [
+                "http://localhost:3000",        // Для разработки
+                "https://localhost:3000",       // Для разработки с HTTPS
+                "http://doclearn.ru",           // HTTP версия сайта
+                "https://doclearn.ru",          // ✅ HTTPS версия сайта
+                "https://www.doclearn.ru",      // ✅ WWW версия
+                "https://api.doclearn.ru"       // ✅ API домен (если фронт делает запросы)
+            ],
+            credentials: true,                  // ✅ Обязательно для cookies
             methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             allowedHeaders: ["Content-Type", "Authorization"],
         }));
 
         app.use(express.json());
+
+        // ✅ Добавляем middleware для логирования (для отладки)
+        app.use((req, res, next) => {
+            console.log('🔍 Request details:', {
+                origin: req.get('origin'),
+                host: req.get('host'),
+                protocol: req.protocol,
+                'x-forwarded-proto': req.get('x-forwarded-proto'),
+                cookies: req.cookies,
+                userAgent: req.get('user-agent')
+            });
+            next();
+        });
 
         app.use("/auth", authRoutes);
         app.use("/post", postRoutes);
@@ -40,6 +60,8 @@ async function main() {
         const port = process.env.PORT || 8080;
         app.listen(port, () => {
             console.log(`🚀 Server started on port ${port}`);
+            console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`🔒 Protocol: ${process.env.HTTPS ? 'HTTPS' : 'HTTP'}`);
         });
     } catch (err) {
         console.error("❌ Ошибка запуска сервера:", err);
