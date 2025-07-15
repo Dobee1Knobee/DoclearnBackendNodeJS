@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { AuthService } from "@/services/AuthService";
+import jwt from "jsonwebtoken";
+import {AuthenticatedRequest} from "@/middlewares/authMiddleWare";
 
 const authService = new AuthService();
 
@@ -35,6 +37,24 @@ export class AuthController {
             next(err);
         }
     }
+
+    async logout(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+        try {
+            const accessToken = req.cookies.token;
+            if (!accessToken) {
+                return res.status(401).json({ error: "Не авторизован" });
+            }
+            const userId = req.user?.id
+
+            await authService.logout(userId?.toString() as string);
+            res.clearCookie("token")
+            res.status(200).json({message:"Вы успешно вышли из аккаунта"})
+        } catch (error) {
+            next(error);
+        }
+    }
+
+
     async refresh(req: Request, res: Response,next: NextFunction) {
         try {
             const { refreshToken } = req.body;

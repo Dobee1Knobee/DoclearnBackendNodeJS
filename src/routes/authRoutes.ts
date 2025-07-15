@@ -1,6 +1,7 @@
 import {NextFunction, Router} from "express";
 import { AuthController } from "@/controllers/AuthController";
 import rateLimit from 'express-rate-limit';
+import {authMiddleware} from "@/middlewares/authMiddleWare";
 
 const router = Router();
 const controller = new AuthController();
@@ -30,7 +31,9 @@ router.post("/login",controller.login)
 router.post("/refresh", async (req, res, next) => {
     await controller.refresh(req, res, next);
 });
-router.post("/verify-email", async (req, res,next) => {
+router.delete("/logout",authMiddleware, async (req, res, next) => {
+    await controller.logout(req, res, next);
+});router.post("/verify-email", async (req, res,next) => {
     await controller.verify(req, res,next);
 });
 

@@ -106,6 +106,16 @@ export class AuthService {
         };
     }
 
+    async logout(userId: string): Promise<void> {
+        const result = await RefreshTokenModel.deleteMany({ userId });
+
+        // result.deletedCount - количество удаленных документов
+        if (result.deletedCount === 0) {
+            // Пользователь уже был разлогинен или токенов не было
+            console.log("No refresh tokens found for user");
+        }
+    }
+
     async refreshAccessToken(refreshToken: string): Promise<{ token: string }> {
         const userId = await this.validateRefreshToken(refreshToken);
 
