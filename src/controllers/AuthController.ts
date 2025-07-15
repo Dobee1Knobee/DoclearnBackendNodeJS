@@ -48,6 +48,8 @@ export class AuthController {
 
             await authService.logout(userId?.toString() as string);
             res.clearCookie("token")
+            res.clearCookie("refreshToken")
+
             res.status(200).json({message:"Вы успешно вышли из аккаунта"})
         } catch (error) {
             next(error);
