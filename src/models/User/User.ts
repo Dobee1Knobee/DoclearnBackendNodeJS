@@ -48,7 +48,7 @@ const userSchema = new Schema({
     education: [{
         institution: { type: String, required: true }, // "Первый МГМУ им. И.М. Сеченова"
         degree: { type: String }, // "Специалитет", "Ординатура"
-        startDate: { type: Date, required: true },
+        startDate: { type: String, required: true },
         specialty: { type: String }, // "Лечебное дело"
         graduationYear: { type: Number },
         isCurrently: { type: Boolean, default: false },
