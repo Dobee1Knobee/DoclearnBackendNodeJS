@@ -322,7 +322,8 @@ export class UserService {
 
                 await UserModel.findByIdAndUpdate(userId, {
                     pendingChanges: {
-                        data: {...newFormatData},           // ✅ Новая структура!
+                        data: {...oldData,
+                            ...newFormatData},           // ✅ Новая структура!
                         globalStatus: 'pending',       // ✅ Правильное поле!
                         submittedAt: new Date()
                     }
