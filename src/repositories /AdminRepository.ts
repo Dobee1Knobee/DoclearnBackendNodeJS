@@ -28,56 +28,58 @@ export interface IAdminRepository {
         moderatorId: string;
         moderatorComment: string;
     }): Promise<void>;
-    // Новый метод для частичного одобрения
     approveSpecificChanges(userId: string, fieldsToApprove: string[], moderatorData: {
         moderatorId: string;
         moderatorComment?: string;
     }): Promise<void>;
 }
 
-// Helper функция для извлечения values из новой структуры pendingChanges
-function extractApprovedValues(pendingData: PendingChangesData): any {
-    const result: any = {};
-    for (const [field, data] of Object.entries(pendingData)) {
-        if (data && typeof data === 'object' && 'value' in data && 'status' in data) {
-            if (data.status === 'approved') {
-                result[field] = data.value;
-            }
-        }
-    }
-    return result;
-}
-
-// Helper функция для извлечения конкретных полей
-function extractSpecificFieldValues(pendingData: PendingChangesData, fieldsToApprove: string[]): any {
-    const result: any = {};
-    for (const field of fieldsToApprove) {
-        if (pendingData[field] && typeof pendingData[field] === 'object' && 'value' in pendingData[field]) {
-            result[field] = pendingData[field].value;
-        }
-    }
-    return result;
-}
-
-// Helper функция для проверки глобального статуса
-function calculateGlobalStatus(pendingData: PendingChangesData): 'pending' | 'approved' | 'rejected' | 'partial' {
-    const statuses = Object.values(pendingData)
-        .filter(item => item && typeof item === 'object' && 'status' in item)
-        .map(item => item.status);
-
-    if (statuses.length === 0) return 'pending';
-
-    const uniqueStatuses = [...new Set(statuses)];
-
-    if (uniqueStatuses.length === 1) {
-        return uniqueStatuses[0] as 'pending' | 'approved' | 'rejected';
-    } else {
-        return 'partial';
-    }
-}
-
 export class AdminRepository implements IAdminRepository {
 
+    // ✅ Приватные методы класса
+    private extractSpecificFieldValues(pendingData: PendingChangesData, fieldsToApprove: string[]): any {
+        const result: any = {};
+        for (const field of fieldsToApprove) {
+            if (pendingData[field] && typeof pendingData[field] === 'object' && 'value' in pendingData[field]) {
+                result[field] = pendingData[field].value;
+            }
+        }
+        return result;
+    }
+
+    private calculateGlobalStatus(pendingData: PendingChangesData): 'pending' | 'approved' | 'rejected' | 'partial' | 'completed' {
+        if (Object.keys(pendingData).length === 0) {
+            return 'completed';
+        }
+
+        const statuses = Object.values(pendingData)
+            .filter(item => item && typeof item === 'object' && 'status' in item)
+            .map(item => item.status);
+
+        if (statuses.length === 0) return 'pending';
+
+        const uniqueStatuses = [...new Set(statuses)];
+
+        if (uniqueStatuses.length === 1) {
+            return uniqueStatuses[0] as 'pending' | 'approved' | 'rejected';
+        } else {
+            return 'partial';
+        }
+    }
+
+    private extractApprovedValues(pendingData: PendingChangesData): any {
+        const result: any = {};
+        for (const [field, data] of Object.entries(pendingData)) {
+            if (data && typeof data === 'object' && 'value' in data && 'status' in data) {
+                if (data.status === 'approved') {
+                    result[field] = data.value;
+                }
+            }
+        }
+        return result;
+    }
+
+    // ✅ Остальные методы без изменений
     async findUserById(userId: string): Promise<User | null> {
         try {
             const user = await UserModel.findById(userId)
@@ -219,14 +221,12 @@ export class AdminRepository implements IAdminRepository {
         }
     }
 
-    // Старый метод - теперь одобряет ВСЕ изменения
     async approveUserChanges(userId: string, changes: any, moderatorData: {
         moderatorId: string;
         moderatorComment?: string;
     }): Promise<void> {
         try {
-            // Извлекаем все values из новой структуры
-            const approvedValues = extractApprovedValues(changes);
+            const approvedValues = this.extractApprovedValues(changes);
 
             await UserModel.findByIdAndUpdate(userId, {
                 ...approvedValues,
@@ -240,48 +240,54 @@ export class AdminRepository implements IAdminRepository {
         }
     }
 
-    // Новый метод - одобряет только конкретные поля
+    // ✅ ИСПРАВЛЕННЫЙ метод approveSpecificChanges
     async approveSpecificChanges(userId: string, fieldsToApprove: string[], moderatorData: {
         moderatorId: string;
         moderatorComment?: string;
     }): Promise<void> {
         try {
-            // Получаем пользователя с pending changes
             const user = await UserModel.findById(userId);
             if (!user || !user.pendingChanges?.data) {
                 throw new ApiError(404, "Пользователь или изменения не найдены");
             }
-            const oldData = user.pendingChanges?.data;
 
-            // Извлекаем values только для указанных полей
-            const approvedValues = extractSpecificFieldValues(user.pendingChanges.data, fieldsToApprove);
+            const currentPendingData = user.pendingChanges.data;
 
-            // Обновляем статус конкретных полей на 'approved'
+            // ✅ Используем this. для вызова методов класса
+            const approvedValues = this.extractSpecificFieldValues(currentPendingData, fieldsToApprove);
+
+            const remainingPendingData: any = {};
+            Object.keys(currentPendingData).forEach(fieldName => {
+                if (!fieldsToApprove.includes(fieldName)) {
+                    remainingPendingData[fieldName] = currentPendingData[fieldName];
+                }
+            });
+
+            const newGlobalStatus = Object.keys(remainingPendingData).length > 0
+                ? this.calculateGlobalStatus(remainingPendingData)
+                : 'completed';
+
             const updateData: any = {
-                ...oldData,
                 ...approvedValues,
+                'pendingChanges.data': remainingPendingData,
+                'pendingChanges.globalStatus': newGlobalStatus,
                 'pendingChanges.moderatorId': moderatorData.moderatorId,
-                'pendingChanges.moderatedAt': new Date(),
-                'pendingChanges.moderatorComment': moderatorData.moderatorComment
+                'pendingChanges.moderatedAt': new Date()
             };
 
-            // Обновляем статус полей в pendingChanges.data
-            for (const field of fieldsToApprove) {
-                updateData[`pendingChanges.data.${field}.status`] = 'approved';
+            if (moderatorData.moderatorComment) {
+                updateData['pendingChanges.moderatorComment'] = moderatorData.moderatorComment;
             }
 
-            // Вычисляем новый глобальный статус
-            const updatedPendingData = { ...user.pendingChanges.data };
-            for (const field of fieldsToApprove) {
-                if (updatedPendingData[field]) {
-                    updatedPendingData[field].status = 'approved';
-                }
+            if (Object.keys(remainingPendingData).length === 0) {
+                updateData['pendingChanges'] = undefined;
             }
-
-            const newGlobalStatus = calculateGlobalStatus(updatedPendingData);
-            updateData['pendingChanges.globalStatus'] = newGlobalStatus;
 
             await UserModel.findByIdAndUpdate(userId, updateData);
+
+            console.log(`✅ Применены изменения: ${fieldsToApprove.join(', ')}`);
+            console.log(`📋 Остались в ожидании: ${Object.keys(remainingPendingData).join(', ') || 'нет'}`);
+
         } catch (error) {
             if (error instanceof ApiError) throw error;
             throw new ApiError(500, "Ошибка при частичном одобрении изменений");
