@@ -251,12 +251,14 @@ export class AdminRepository implements IAdminRepository {
             if (!user || !user.pendingChanges?.data) {
                 throw new ApiError(404, "Пользователь или изменения не найдены");
             }
+            const oldData = user.pendingChanges?.data;
 
             // Извлекаем values только для указанных полей
             const approvedValues = extractSpecificFieldValues(user.pendingChanges.data, fieldsToApprove);
 
             // Обновляем статус конкретных полей на 'approved'
             const updateData: any = {
+                ...oldData,
                 ...approvedValues,
                 'pendingChanges.moderatorId': moderatorData.moderatorId,
                 'pendingChanges.moderatedAt': new Date(),
