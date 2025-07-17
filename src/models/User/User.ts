@@ -98,7 +98,7 @@ const userSchema = new Schema({
         globalStatus: {
             type: String,
             enum: ['pending', 'approved', 'rejected', 'partial'], // добавили 'partial' для случаев когда одни поля одобрены, другие - нет
-            default: 'pending'
+
         },
         submittedAt: { type: Date, default: Date.now },
         moderatorId: { type: Schema.Types.ObjectId, ref: 'User' },

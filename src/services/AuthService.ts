@@ -46,6 +46,7 @@ export class AuthService {
             "isVerified.user": false,
             "isVerified.doctor": false,
 
+
         });
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         verificationCodes.set(dto.email, code);
