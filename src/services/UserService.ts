@@ -281,6 +281,7 @@ export class UserService {
             if (!user) {
                 throw new ApiError(404, "Пользователь не найден");
             }
+            const oldData = user.pendingChanges?.data;
 
             // 4. Валидация данных
             this.validateUpdateData(updateData);
@@ -314,11 +315,7 @@ export class UserService {
                         status: 'pending'
                     };
                 }
-                const user =  await UserModel.findById(userId);
-                if(!user) {
-                    throw new ApiError(404,"Пользователь не найден")
-                }
-                const oldData = user.pendingChanges?.data;
+
 
                 await UserModel.findByIdAndUpdate(userId, {
                     pendingChanges: {
