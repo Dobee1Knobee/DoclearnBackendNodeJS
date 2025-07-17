@@ -281,7 +281,7 @@ export class UserService {
             if (!user) {
                 throw new ApiError(404, "Пользователь не найден");
             }
-            const oldData = user.pendingChanges?.data;
+            const oldData = user.pendingChanges?.data || {};
 
             // 4. Валидация данных
             this.validateUpdateData(updateData);
