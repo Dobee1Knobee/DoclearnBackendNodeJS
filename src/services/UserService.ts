@@ -314,6 +314,11 @@ export class UserService {
                         status: 'pending'
                     };
                 }
+                const user =  await UserModel.findById(userId);
+                if(!user) {
+                    throw new ApiError(404,"Пользователь не найден")
+                }
+                const oldData = user.pendingChanges?.data;
 
                 await UserModel.findByIdAndUpdate(userId, {
                     pendingChanges: {
