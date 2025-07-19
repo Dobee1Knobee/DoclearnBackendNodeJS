@@ -387,7 +387,7 @@ export class UserService {
         const allowedFields = [
             'firstName', 'lastName', 'location', 'experience',
             'bio', 'placeWork', 'specialization', 'avatar',
-            'contacts', 'education','birthday','defaultAvatarPath'
+            'contacts', 'education','birthday','defaultAvatarPath','middleName'
         ];
 
         const receivedFields = Object.keys(updateData);
