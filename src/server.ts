@@ -36,7 +36,6 @@ async function main() {
 
         app.use(express.json());
 
-        // ✅ Добавляем middleware для логирования (для отладки)
         app.use((req, res, next) => {
             console.log('🔍 Request details:', {
                 origin: req.get('origin'),
@@ -44,10 +43,12 @@ async function main() {
                 protocol: req.protocol,
                 'x-forwarded-proto': req.get('x-forwarded-proto'),
                 cookies: req.cookies,
-                userAgent: req.get('user-agent')
+                userAgent: req.get('user-agent'),
+                time: Date.now()
             });
             next();
         });
+
 
         app.use("/auth", authRoutes);
         app.use("/post", postRoutes);

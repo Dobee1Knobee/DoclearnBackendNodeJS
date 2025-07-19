@@ -103,7 +103,8 @@ const userSchema = new Schema({
         submittedAt: { type: Date, default: Date.now },
         moderatorId: { type: Schema.Types.ObjectId, ref: 'User' },
         moderatedAt: { type: Date },
-        moderatorComment: { type: String }
+        moderatorComment: { type: String },
+        isVerified: { type: Boolean, default: false }
     },
 
     isVerified: {

@@ -19,6 +19,7 @@ export interface IAdminRepository {
         issuedBy: string;
         reason?: string;
     }): Promise<void>;
+    findEducationById(userId: string,education:string): Promise<User | null>;
     getUserWithPendingChanges(userId: string): Promise<User | null>;
     approveUserChanges(userId: string, changes: any, moderatorData: {
         moderatorId: string;
@@ -285,8 +286,6 @@ export class AdminRepository implements IAdminRepository {
 
             await UserModel.findByIdAndUpdate(userId, updateData);
 
-            console.log(`✅ Применены изменения: ${fieldsToApprove.join(', ')}`);
-            console.log(`📋 Остались в ожидании: ${Object.keys(remainingPendingData).join(', ') || 'нет'}`);
 
         } catch (error) {
             if (error instanceof ApiError) throw error;

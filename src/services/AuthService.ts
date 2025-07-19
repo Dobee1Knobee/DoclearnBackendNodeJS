@@ -34,6 +34,7 @@ export class AuthService {
             password: hashedPassword,
             firstName: dto.firstName,
             lastName: dto.lastName,
+            middleName: dto.middleName,
             contacts: dto.contacts,
             location: dto.location || 'Не указано',
             experience: dto.experience || 'Не указан',
