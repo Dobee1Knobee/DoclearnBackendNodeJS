@@ -19,7 +19,7 @@ export interface IAdminRepository {
         issuedBy: string;
         reason?: string;
     }): Promise<void>;
-    findEducationById(userId: string,education:string): Promise<User | null>;
+    // findEducationById(userId: string,education:string): Promise<User | null>;
     getUserWithPendingChanges(userId: string): Promise<User | null>;
     approveUserChanges(userId: string, changes: any, moderatorData: {
         moderatorId: string;
