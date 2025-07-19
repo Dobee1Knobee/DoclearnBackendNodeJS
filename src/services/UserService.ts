@@ -361,7 +361,7 @@ export class UserService {
         fieldsForImmediateUpdate: Partial<UpdateUserProfileDto>;
     } {
         const moderationFields: (keyof UpdateUserProfileDto)[] = [
-            'specialization', 'education', 'placeWork', 'firstName', 'lastName'
+            'specialization', 'education', 'placeWork', 'firstName', 'lastName',"middleName"
         ];
         const immediateFields: (keyof UpdateUserProfileDto)[] = [
             'location', 'experience', 'bio', 'avatar', 'contacts',"birthday","defaultAvatarPath"
