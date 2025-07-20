@@ -67,7 +67,6 @@ export class UserService {
                 throw new ApiError(404, "Пользователь не найден");
             }
             const userWithAvatar = mapUserToPublicDto(result);
-
             if (result.avatarId) {
                 const avatarUrl = await this.getAvatarUrl(result.avatarId._id.toString());
                 userWithAvatar.avatarUrl = avatarUrl || undefined;

@@ -34,7 +34,7 @@ export class UserRepository implements IUserRepository {
     async findByIdForProfile(id: string): Promise<any | null> {
         try {
             return await UserModel.findById(id)
-                .select('firstName lastName location experience birthday specialization rating bio email role placeWork contacts education stats isVerified createdAt updatedAt avatarId defaultAvatarPath documents') // добавили avatarId
+                .select('firstName lastName location experience birthday specialization rating bio email role placeWork contacts education stats isVerified createdAt updatedAt avatarId defaultAvatarPath documents middleName') // добавили avatarId
                 .select('-password') // исключаем пароль
                 .populate('avatarId') // загружаем данные файла
                 .lean();
