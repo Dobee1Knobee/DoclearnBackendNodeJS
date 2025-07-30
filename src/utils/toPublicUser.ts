@@ -4,6 +4,7 @@ export function mapUserToPublicDto(user: any, isFollowing?: boolean): UserDto {
     return {
         _id: (user as any)._id || (user as any)._id?.toString() || '',
         firstName: user.firstName || '',
+        avatarUrl : user.avatarUrl || "",
         middleName: user.middleName || '',
         lastName: user.lastName || '',
         defaultAvatarPath : user.defaultAvatarPath || '',
@@ -16,7 +17,6 @@ export function mapUserToPublicDto(user: any, isFollowing?: boolean): UserDto {
         birthday: user.birthday || new Date(),
         placeWork: user.placeWork,
         avatarId: user.avatarId || null,        // ← ИЗМЕНЕНО: avatar → avatarId
-        avatarUrl: user.avatarUrl || null,      // ← ДОБАВЛЕНО: для signed URL
         contacts: user.contacts || [],
         education: user.education || [],
         documents: user.documents ||[],

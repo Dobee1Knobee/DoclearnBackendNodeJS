@@ -19,6 +19,7 @@ const userSchema = new Schema({
 
     },
     placeWork: { type: String },
+    placeStudy: { type: String },
     defaultAvatarPath: { type: String,required: true },
     avatarId: {
         type: Schema.Types.ObjectId,
@@ -67,6 +68,7 @@ const userSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "User"
     }],
+
 
     joinTo: [{
         eventId: { type: Schema.Types.ObjectId, ref: 'Announcement', required: true }, // вернули eventId

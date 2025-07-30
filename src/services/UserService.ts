@@ -36,7 +36,7 @@ export class UserService {
         throw new ApiError(500, defaultMessage);
     }
 
-    private async getAvatarUrl(avatarId: string): Promise<string | null> {
+    async getAvatarUrl(avatarId: string): Promise<string | null> {
         if(!avatarId) return null;
 
         const avatarFile = await FileModel.findById(avatarId);

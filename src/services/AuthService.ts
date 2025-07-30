@@ -14,11 +14,16 @@ import {Response} from "express";
 import {UserDto} from "@/dto/UserDto";
 import {ApiError} from "@/errors/ApiError";
 import {IRefreshToken, RefreshTokenModel} from "@/models/Password/RefreshToken";
+import {UserService} from "@/services/UserService";
 
 // Временное хранилище кодов подтверждения
 const verificationCodes = new Map<string, string>();
 
 export class AuthService {
+    private userService: UserService;
+    constructor() {
+        this.userService = new UserService();
+    }
     async register(dto: RegisterDto): Promise<UserDto> {
         const existUser = await UserModel.findOne({ email: dto.email }).lean<User>();
 
@@ -92,6 +97,14 @@ export class AuthService {
         if (!user.isVerified) {
             throw new Error("Пользователь не верифицирован");
         }
+        const userDto = mapUserToPublicDto(user);
+
+        // Добавляем avatar URL
+        if (user.avatarId) {
+            const avatarUrl = await this.userService.getAvatarUrl(user.avatarId.toString());
+            console.log(avatarUrl);
+            userDto.avatarUrl = avatarUrl;
+        }
 
         const token = jwt.sign({
             id: user._id.toString(),
@@ -104,7 +117,7 @@ export class AuthService {
         return {
             token,
             refreshToken,
-            user: mapUserToPublicDto(user.toObject())
+            user: mapUserToPublicDto(userDto)
         };
     }
 
