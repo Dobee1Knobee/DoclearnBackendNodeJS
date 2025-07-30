@@ -69,6 +69,7 @@ export class UserService {
             const userWithAvatar = mapUserToPublicDto(result);
             if (result.avatarId) {
                 const avatarUrl = await this.getAvatarUrl(result.avatarId._id.toString());
+                userWithAvatar.avatarId = result.avatarId._id.toString();
                 userWithAvatar.avatarUrl = avatarUrl || undefined;
             }
 
