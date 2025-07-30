@@ -586,7 +586,7 @@ export class UserService {
     /**
      * Загрузка аватара пользователя
      */
-    async uploadAvatar(userId: string, file: any): Promise<{ message: string; avatarUrl: string }> {
+    async uploadAvatar(userId: string, file: any): Promise<{ message: string; avatarUrl: string; avatarId: any }> {
         try {
             const uploadResult = await this.fileService.uploadFile(file, "avatar", userId);
             const fileRecord = await FileModel.create({
@@ -605,7 +605,8 @@ export class UserService {
             });
 
             const avatarUrl = await this.fileService.getSignedUrl(fileRecord.fileName, "avatar");
-            return { message: "Аватар успешно обновлен", avatarUrl };
+            const avatarId = fileRecord._id;
+            return { message: "Аватар успешно обновлен", avatarUrl, avatarId };
         } catch (error) {
             this.handleError(error, "Ошибка при загрузке аватара");
         }
