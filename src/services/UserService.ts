@@ -200,7 +200,7 @@ export class UserService {
                 ],
                 "isVerified.user": true // Показываем только верифицированных пользователей
             })
-                .select('firstName lastName location experience rating bio email role placeWork contacts education stats isVerified avatarId')
+                .select('firstName lastName location experience rating bio email role placeWork contacts education stats isVerified avatarId middleName birthday defaultAvatarPath')
                 .limit(limit)
                 .lean();
 
