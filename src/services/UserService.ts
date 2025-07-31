@@ -361,7 +361,7 @@ export class UserService {
         fieldsForImmediateUpdate: Partial<UpdateUserProfileDto>;
     } {
         const moderationFields: (keyof UpdateUserProfileDto)[] = [
-            'specialization', 'education', 'placeWork', 'firstName', 'lastName',"middleName"
+            'specializations', 'education', 'placeWork', 'firstName', 'lastName',"middleName"
         ];
         const immediateFields: (keyof UpdateUserProfileDto)[] = [
             'location', 'experience', 'bio', 'avatar', 'contacts',"birthday","defaultAvatarPath"
@@ -386,7 +386,7 @@ export class UserService {
     private validateAllowedFields(updateData: any): void {
         const allowedFields = [
             'firstName', 'lastName', 'location', 'experience',
-            'bio', 'placeWork', 'specialization', 'avatar',
+            'bio', 'placeWork', 'specializations', 'avatar',
             'contacts', 'education','birthday','defaultAvatarPath','middleName'
         ];
 

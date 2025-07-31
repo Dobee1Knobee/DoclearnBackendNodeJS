@@ -27,7 +27,8 @@ async function main() {
                 "http://doclearn.ru",           // HTTP версия сайта
                 "https://doclearn.ru",          // ✅ HTTPS версия сайта
                 "https://www.doclearn.ru",      // ✅ WWW версия
-                "https://api.doclearn.ru"       // ✅ API домен (если фронт делает запросы)
+                "https://api.doclearn.ru",
+                "http://192.168.1.136:3000"// ✅ API домен (если фронт делает запросы)
             ],
             credentials: true,                  // ✅ Обязательно для cookies
             methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],

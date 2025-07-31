@@ -325,7 +325,8 @@ export class AdminService {
 
         } catch (error) {
             if (error instanceof ApiError) throw error;
-            throw new ApiError(500, "Ошибка при частичном одобрении изменений");
+            console.log(error);
+            throw new ApiError(500, "Ошибка при частичном одобрении изменений ");
         }
     }
 }

@@ -40,23 +40,16 @@ export class AuthService {
             firstName: dto.firstName,
             lastName: dto.lastName,
             middleName: dto.middleName,
-            contacts: dto.contacts,
-            location: dto.location || 'Не указано',
-            experience: dto.experience || 'Не указан',
             avatar: dto.avatar,
-            specialization: dto.specialization,
-            education: dto.education || [],
             birthday: dto.birthday,
             role: dto.role,
             placeWork: dto.placeWork,
             "isVerified.user": false,
             "isVerified.doctor": false,
-
-
-        });
+      });
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         verificationCodes.set(dto.email, code);
-
+        console.log(dto.email)
         await new EmailService().sendMail(
             dto.email,
             "Код подтверждения аккаунта Doclearn",

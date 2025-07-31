@@ -2,6 +2,7 @@ import { User, UserModel, PendingChangesData } from "@/models/User/User";
 import { ApiError } from "@/errors/ApiError";
 import { UserDto } from "@/dto/UserDto";
 import { mapUserToPublicDto } from "@/utils/toPublicUser";
+import mongoose from "mongoose";
 
 export interface IAdminRepository {
     findUserById(userId: string): Promise<User | null>;
@@ -39,12 +40,100 @@ export class AdminRepository implements IAdminRepository {
 
     // ✅ Приватные методы класса
     private extractSpecificFieldValues(pendingData: PendingChangesData, fieldsToApprove: string[]): any {
+        console.log('🔧 extractSpecificFieldValues called with:', {
+            fieldsToApprove,
+            pendingDataKeys: Object.keys(pendingData)
+        });
+
         const result: any = {};
+
         for (const field of fieldsToApprove) {
-            if (pendingData[field] && typeof pendingData[field] === 'object' && 'value' in pendingData[field]) {
-                result[field] = pendingData[field].value;
+            const fieldData = pendingData[field];
+
+            if (fieldData && typeof fieldData === 'object' && 'value' in fieldData) {
+                let extractedValue = fieldData.value;
+
+                console.log(`📋 Processing field ${field}:`, {
+                    originalValue: extractedValue,
+                    valueType: typeof extractedValue,
+                    isArray: Array.isArray(extractedValue)
+                });
+
+                // ✅ Специальная обработка для specializations
+                if (field === 'specializations' && Array.isArray(extractedValue)) {
+                    extractedValue = extractedValue.map(spec => {
+                        const processedSpec = { ...spec };
+
+                        console.log('🔍 Processing specialization:', spec);
+
+                        // ✅ Исправляем method если он пришел как объект { type: 'Ординатура' }
+                        if (processedSpec.method && typeof processedSpec.method === 'object') {
+                            if ('type' in processedSpec.method) {
+                                processedSpec.method = processedSpec.method.type;
+                                console.log(`🔧 Fixed method from type: ${processedSpec.method}`);
+                            } else if ('enum' in processedSpec.method) {
+                                processedSpec.method = processedSpec.method.enum;
+                                console.log(`🔧 Fixed method from enum: ${processedSpec.method}`);
+                            }
+                        }
+
+                        // ✅ Исправляем qualificationCategory если он пришел как объект
+                        if (processedSpec.qualificationCategory && typeof processedSpec.qualificationCategory === 'object') {
+                            if ('type' in processedSpec.qualificationCategory) {
+                                processedSpec.qualificationCategory = processedSpec.qualificationCategory.type;
+                                console.log(`🔧 Fixed qualificationCategory from type: ${processedSpec.qualificationCategory}`);
+                            } else if ('enum' in processedSpec.qualificationCategory) {
+                                processedSpec.qualificationCategory = processedSpec.qualificationCategory.enum;
+                                console.log(`🔧 Fixed qualificationCategory from enum: ${processedSpec.qualificationCategory}`);
+                            }
+                        }
+
+                        // ✅ Убираем _id если он есть (так как _id: false в схеме)
+                        if ('_id' in processedSpec) {
+                            delete processedSpec._id;
+                            console.log('🗑️  Removed _id from specialization');
+                        }
+
+                        // ✅ Проверяем обязательные поля
+                        if (!processedSpec.specializationId) {
+                            console.warn('⚠️  Missing specializationId in specialization:', processedSpec);
+                        }
+                        if (!processedSpec.method) {
+                            console.warn('⚠️  Missing method in specialization:', processedSpec);
+                        }
+                        if (!processedSpec.qualificationCategory) {
+                            console.warn('⚠️  Missing qualificationCategory in specialization:', processedSpec);
+                        }
+                        if (processedSpec.main === undefined || processedSpec.main === null) {
+                            console.warn('⚠️  Missing main field in specialization:', processedSpec);
+                        }
+
+                        console.log(`✅ Final processed specialization:`, processedSpec);
+                        return processedSpec;
+                    });
+
+                    console.log(`📊 All specializations processed:`, extractedValue);
+                }
+
+                // ✅ Общая обработка для других полей, которые могут быть объектами
+                else if (extractedValue && typeof extractedValue === 'object' && !Array.isArray(extractedValue)) {
+                    if ('type' in extractedValue) {
+                        extractedValue = extractedValue.type;
+                        console.log(`🔧 Fixed object field ${field} from type: ${extractedValue}`);
+                    } else if ('enum' in extractedValue) {
+                        extractedValue = extractedValue.enum;
+                        console.log(`🔧 Fixed object field ${field} from enum: ${extractedValue}`);
+                    }
+                }
+
+                result[field] = extractedValue;
+                console.log(`✅ Final value for ${field}:`, JSON.stringify(extractedValue, null, 2));
+            } else {
+                console.log(`⚠️  Field ${field} has no valid value:`, fieldData);
             }
         }
+
+        console.log('📊 Final extracted values:', JSON.stringify(result, null, 2));
         return result;
     }
 
@@ -242,21 +331,38 @@ export class AdminRepository implements IAdminRepository {
     }
 
     // ✅ ИСПРАВЛЕННЫЙ метод approveSpecificChanges
+    // ✅ ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ метод approveSpecificChanges
     async approveSpecificChanges(userId: string, fieldsToApprove: string[], moderatorData: {
         moderatorId: string;
         moderatorComment?: string;
     }): Promise<void> {
         try {
+            console.log('🏪 Repository: approveSpecificChanges started', {
+                userId,
+                fieldsToApprove,
+                moderatorData
+            });
+
             const user = await UserModel.findById(userId);
             if (!user || !user.pendingChanges?.data) {
+                console.log('❌ Repository: User or pending changes not found');
                 throw new ApiError(404, "Пользователь или изменения не найдены");
             }
+
+            console.log('✅ Repository: User found', {
+                userId: user._id,
+                hasPendingChanges: !!user.pendingChanges,
+                pendingDataKeys: user.pendingChanges?.data ? Object.keys(user.pendingChanges.data) : []
+            });
 
             const currentPendingData = user.pendingChanges.data;
 
             // ✅ Используем this. для вызова методов класса
+            console.log('🔄 Repository: Extracting approved values...');
             const approvedValues = this.extractSpecificFieldValues(currentPendingData, fieldsToApprove);
+            console.log('📊 Repository: Approved values extracted:', approvedValues);
 
+            // Формируем оставшиеся pending данные
             const remainingPendingData: any = {};
             Object.keys(currentPendingData).forEach(fieldName => {
                 if (!fieldsToApprove.includes(fieldName)) {
@@ -264,32 +370,54 @@ export class AdminRepository implements IAdminRepository {
                 }
             });
 
+            console.log('📋 Repository: Remaining pending data:', {
+                remainingKeys: Object.keys(remainingPendingData)
+            });
+
             const newGlobalStatus = Object.keys(remainingPendingData).length > 0
                 ? this.calculateGlobalStatus(remainingPendingData)
                 : 'completed';
 
-            const updateData: any = {
-                ...approvedValues,
-                'pendingChanges.data': remainingPendingData,
-                'pendingChanges.globalStatus': newGlobalStatus,
-                'pendingChanges.moderatorId': moderatorData.moderatorId,
-                'pendingChanges.moderatedAt': new Date()
-            };
+            console.log('📊 Repository: New global status:', newGlobalStatus);
+
+            // ✅ КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Применяем изменения к объекту user напрямую
+            console.log('💾 Repository: Applying approved values to user object...');
+            Object.assign(user, approvedValues);
+
+            // ✅ Обновляем pendingChanges напрямую в объекте user
+            console.log('🔄 Repository: Updating pending changes metadata...');
+            user.pendingChanges.data = remainingPendingData;
+            // @ts-ignore
+            user.pendingChanges.globalStatus = newGlobalStatus;
+            user.pendingChanges.moderatorId = new mongoose.Types.ObjectId(moderatorData.moderatorId);
+            user.pendingChanges.moderatedAt = new Date();
 
             if (moderatorData.moderatorComment) {
-                updateData['pendingChanges.moderatorComment'] = moderatorData.moderatorComment;
+                user.pendingChanges.moderatorComment = moderatorData.moderatorComment;
             }
 
+            // Если больше нет pending данных, очищаем pendingChanges
             if (Object.keys(remainingPendingData).length === 0) {
-                updateData['pendingChanges'] = undefined;
+                console.log('🗑️  Repository: Clearing pending changes (all approved)');
+                user.pendingChanges = undefined;
             }
 
-            await UserModel.findByIdAndUpdate(userId, updateData);
+            // ✅ САМОЕ ВАЖНОЕ: Используем save() вместо findByIdAndUpdate()
+            // Это запустит middleware, который заполнит specializations.name
+            console.log('💾 Repository: Saving user with middleware execution...');
+            await user.save();
 
+            console.log('✅ Repository: User saved successfully with middleware execution');
 
         } catch (error) {
+            console.error('💥 Repository error in approveSpecificChanges:', {
+                error: error instanceof Error ? error.message : error,
+                stack: error instanceof Error ? error.stack : undefined
+            });
+
             if (error instanceof ApiError) throw error;
-            throw new ApiError(500, "Ошибка при частичном одобрении изменений");
+            const errorMessage = error instanceof Error ? error.message : 'Unknown repository error';
+            throw new ApiError(500, `Ошибка в repository при частичном одобрении: ${errorMessage}`);
         }
     }
 

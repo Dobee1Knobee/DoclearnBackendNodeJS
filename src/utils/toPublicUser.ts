@@ -7,6 +7,8 @@ export function mapUserToPublicDto(user: any, isFollowing?: boolean): UserDto {
         avatarUrl : user.avatarUrl || "",
         middleName: user.middleName || '',
         lastName: user.lastName || '',
+        specializations : user.specializations || '',
+        workHistory: user.workHistory || '',
         defaultAvatarPath : user.defaultAvatarPath || '',
         specialization: user.specialization || '',
         location: user.location || '',

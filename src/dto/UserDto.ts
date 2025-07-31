@@ -34,6 +34,26 @@ export interface UserDto {
         graduationYear?: number;
         isCurrently: boolean;
     }>;
+    workHistory?: Array<{
+        id: string;
+        organizationId?: string;
+        organizationName: string;
+        position: string;
+        startDate: string;
+        endDate?: string;
+        isCurrently: boolean;
+    }>;
+
+    // Специализации (приведено в соответствие с вашим DTO)
+    specializations?: Array<{
+        specializationId: string;
+        method: {
+            type: string;
+            enum: string;
+        };
+        qualificationCategory?: 'Вторая категория' | 'Первая категория' | 'Высшая категория';
+        main?: boolean;
+    }>;
     role: 'student' | 'admin' | 'user' | 'doctor'; // исправили енум
     following: string[];
     followers: string[];
