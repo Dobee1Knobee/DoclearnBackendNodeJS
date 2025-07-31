@@ -361,10 +361,10 @@ export class UserService {
         fieldsForImmediateUpdate: Partial<UpdateUserProfileDto>;
     } {
         const moderationFields: (keyof UpdateUserProfileDto)[] = [
-            'specializations', 'education', 'placeWork', 'firstName', 'lastName',"middleName"
+            'specializations', 'placeWork', 'firstName', 'lastName',"middleName",'role'
         ];
         const immediateFields: (keyof UpdateUserProfileDto)[] = [
-            'location', 'experience', 'bio', 'avatar', 'contacts',"birthday","defaultAvatarPath"
+            'location', 'experience', 'bio', 'avatar', 'contacts',"birthday","defaultAvatarPath",'education'
         ];
 
         const filterByFields = (fields: (keyof UpdateUserProfileDto)[]) =>
@@ -387,7 +387,7 @@ export class UserService {
         const allowedFields = [
             'firstName', 'lastName', 'location', 'experience',
             'bio', 'placeWork', 'specializations', 'avatar',
-            'contacts', 'education','birthday','defaultAvatarPath','middleName'
+            'contacts', 'education','birthday','defaultAvatarPath','middleName','role'
         ];
 
         const receivedFields = Object.keys(updateData);

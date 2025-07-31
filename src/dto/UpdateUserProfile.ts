@@ -1,6 +1,7 @@
 export interface UpdateUserProfileDto {
     // Основная информация
     firstName?: string;
+    role?: string;
     middleName?: string;
     lastName?: string;
     birthday?: string;

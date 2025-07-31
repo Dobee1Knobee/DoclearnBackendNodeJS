@@ -20,6 +20,7 @@ export const authMiddleware = async (
         const token = req.cookies.token;
 
         if (!token) {
+
             res.status(401).json({
                 success: false,
                 error: "Токен не найден",

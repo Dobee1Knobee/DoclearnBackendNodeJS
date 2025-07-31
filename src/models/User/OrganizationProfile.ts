@@ -7,22 +7,30 @@ const organizationSchema = new Schema({
     description: { type: String },
 
     // Тип организации
-    type: {
+    typeAccount: {
         type: String,
         enum: [
-            'hospital',           // больница
-            'clinic',            // клиника
-            'university',        // университет
-            'research_institute', // научно-исследовательский институт
-            'medical_center',    // медицинский центр
-            'laboratory',        // лабория
-            'pharmacy',          // аптека
-            'government',        // государственное учреждение
-            'private',           // частная организация
-            'other'              // другое
+
         ],
         required: true
     },
+    labels : [
+        {
+            type:String,
+            enum: [
+                'hospital',           // больница
+                'clinic',            // клиника
+                'university',        // университет
+                'research_institute', // научно-исследовательский институт
+                'medical_center',    // медицинский центр
+                'laboratory',        // лабория
+                'pharmacy',          // аптека
+                'government',        // государственное учреждение
+                'private',           // частная организация
+                'other'              // другое
+            ]
+        }
+    ],
 
     // Специализации организации (ссылки на коллекцию specializations)
     specializations: [{
@@ -147,30 +155,7 @@ const organizationSchema = new Schema({
     },
 
     // Медицинская деятельность (для медучреждений)
-    medicalActivity: {
-        licenses: [{
-            number: { type: String, required: true },
-            issuedBy: { type: String, required: true },
-            issuedDate: { type: Date, required: true },
-            validUntil: { type: Date },
-            services: [{ type: String }] // виды медицинских услуг
-        }],
-        equipment: [{
-            id: { type: String, required: true },
-            name: { type: String, required: true },
-            model: { type: String },
-            manufacturer: { type: String },
-            purchaseDate: { type: Date },
-            warrantyUntil: { type: Date },
-            department: { type: String }, // id отделения
-            isActive: { type: Boolean, default: true }
-        }],
-        statistics: {
-            patientsPerYear: { type: Number },
-            bedsCount: { type: Number },
-            operationsPerYear: { type: Number }
-        }
-    },
+
 
     // Логотип и изображения
     logo: {

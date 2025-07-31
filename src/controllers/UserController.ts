@@ -2,6 +2,7 @@ import { UserService } from "@/services/UserService";
 import { NextFunction, Request, Response } from "express";
 import { ApiError } from "@/errors/ApiError";
 import multer from 'multer';
+import logger from "@/logger";
 
 // Расширяем Request для типизации JWT payload
 interface AuthenticatedRequest extends Request {
@@ -50,6 +51,7 @@ export class UserController {
             const userId = req.user?.id;
 
             if (!userId) {
+                logger.error("❌ Пользователь не аутентифицирован");
                 throw new ApiError(401, "Пользователь не аутентифицирован");
             }
 
