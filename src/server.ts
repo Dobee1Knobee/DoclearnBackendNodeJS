@@ -51,8 +51,14 @@ async function main() {
         // 3. Cookie parser с настройками для iOS
         app.use(cookieParser());
 
-        // 4. JSON parser
-        app.use(express.json());
+        // 4. ✅ УВЕЛИЧЕННЫЕ ЛИМИТЫ для загрузки файлов
+        app.use(express.json({
+            limit: '10mb' // увеличено с стандартных ~1mb до 10mb
+        }));
+        app.use(express.urlencoded({
+            limit: '10mb',
+            extended: true
+        }));
 
         // 5. Middleware для установки правильных заголовков для iOS
         app.use((req, res, next) => {
