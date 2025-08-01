@@ -17,53 +17,77 @@ async function main() {
     try {
         await connectDB();
 
-        app.use(cookieParser());
-
-        // ✅ Исправленные CORS настройки для production
+        // 1. CORS должен быть ПЕРВЫМ (до cookieParser)
         app.use(cors({
             origin: [
-                "http://localhost:3000",        // Для разработки
-                "https://localhost:3000",       // Для разработки с HTTPS
-                "http://doclearn.ru",           // HTTP версия сайта
-                "https://doclearn.ru",          // ✅ HTTPS версия сайта
-                "https://www.doclearn.ru",      // ✅ WWW версия
-                "https://api.doclearn.ru",
-                "http://192.168.1.136:3000"// ✅ API домен (если фронт делает запросы)
+                "http://localhost:3000",
+                "http://doclearn.ru",
+                "https://doclearn.ru",
+                "https://www.doclearn.ru",
+                "http://www.doclearn.ru",
+                "http://192.168.1.136:3000"
             ],
-            credentials: true,                  // ✅ Обязательно для cookies
+            credentials: true,
             methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            allowedHeaders: ["Content-Type", "Authorization"],
+            allowedHeaders: [
+                "Content-Type",
+                "Authorization",
+                "X-Requested-With",  // Добавлено для iOS
+                "Accept",
+                "Origin"
+            ],
+            optionsSuccessStatus: 200 // Для старых браузеров
         }));
 
-        app.use(express.json());
+        // 2. Preflight обработка для iOS
+        app.options('*', (req, res) => {
+            res.header('Access-Control-Allow-Origin', req.headers.origin);
+            res.header('Access-Control-Allow-Credentials', 'true');
+            res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+            res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin');
+            res.sendStatus(200);
+        });
 
+        // 3. Cookie parser с настройками для iOS
+        app.use(cookieParser());
+
+        // 4. ✅ УВЕЛИЧЕННЫЕ ЛИМИТЫ для загрузки файлов
+        app.use(express.json({
+            limit: '10mb' // увеличено с стандартных ~1mb до 10mb
+        }));
+        app.use(express.urlencoded({
+            limit: '10mb',
+            extended: true
+        }));
+
+        // 5. Middleware для установки правильных заголовков для iOS
         app.use((req, res, next) => {
-            console.log('🔍 Request details:', {
-                origin: req.get('origin'),
-                host: req.get('host'),
-                protocol: req.protocol,
-                'x-forwarded-proto': req.get('x-forwarded-proto'),
-                cookies: req.cookies,
-                userAgent: req.get('user-agent'),
-                time: Date.now()
-            });
+            // Для iOS Safari
+            res.header('Access-Control-Allow-Credentials', 'true');
+            res.header('Access-Control-Allow-Origin', req.headers.origin);
+
+            // Предотвращение кэширования для авторизации
+            if (req.path.includes('/auth') || req.path.includes('/user')) {
+                res.header('Cache-Control', 'no-store, no-cache, must-revalidate');
+                res.header('Pragma', 'no-cache');
+                res.header('Expires', '0');
+            }
+
             next();
         });
 
-
+        // 6. Роуты
         app.use("/auth", authRoutes);
         app.use("/post", postRoutes);
         app.use("/user", userRoutes);
         app.use("/admin", adminRoutes);
 
-        // Обязательно внизу
+        // 7. Обработка ошибок
         app.use(errorHandler);
 
         const port = process.env.PORT || 8080;
         app.listen(port, () => {
             console.log(`🚀 Server started on port ${port}`);
-            console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-            console.log(`🔒 Protocol: ${process.env.HTTPS ? 'HTTPS' : 'HTTP'}`);
         });
     } catch (err) {
         console.error("❌ Ошибка запуска сервера:", err);
