@@ -205,7 +205,7 @@ export class AuthService {
             const userEmail = user.email as string;
 
             // ✅ ИСПРАВЬ ССЫЛКУ - добавь токен в URL:
-            const resetLink = `http://localhost:3000/reset-password?token=${token}`;
+            const resetLink = `https://doclearn.ru/reset-password?token=${token}`;
 
             await new EmailService().sendMail(userEmail, "Восстановление пароля",
                 `Перейдите по ссылке, чтобы восстановить пароль: ${resetLink}`);
