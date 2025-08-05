@@ -43,6 +43,7 @@ export class AuthService {
             avatar: dto.avatar,
             birthday: dto.birthday,
             role: dto.role,
+            placeStudy: dto.placeStudy,
             placeWork: dto.placeWork,
             "isVerified.user": false,
             "isVerified.doctor": false,

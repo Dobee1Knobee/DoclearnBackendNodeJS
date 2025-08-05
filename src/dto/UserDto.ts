@@ -4,12 +4,12 @@ export interface UserDto {
     lastName: string;
     middleName?: string;
     documents: Array<{
-        file:string,
-        category:{
-            type:string
+        file: string,
+        category: {
+            type: string
         }
-        label?:string
-        isPublic:boolean
+        label?: string
+        isPublic: boolean
     }>;
     defaultAvatarPath: string;
     location?: string;
@@ -19,11 +19,18 @@ export interface UserDto {
     email: string;
     birthday: Date;
     placeWork?: string;
+    placeStudy?: string;
+    scientificStatus?: {
+        degree?: 'Кандидат медицинских наук' | 'Доктор медицинских наук' | null;
+        title?: 'Доцент' | 'Профессор' | null;
+        rank?: 'Член-корреспондент РАН' | 'Академик РАН' | null;
+        interests?: string[];
+    };
     specialization?: string;
-    avatarId?: string ;
+    avatarId?: string | null;
     avatarUrl?: string | null;
     contacts: Array<{
-        type: 'phone' | 'telegram' | 'whatsapp' | 'website' | 'email' | "vk" |"facebook" | "twitter" | "instagram";
+        type: 'phone' | 'telegram' | 'whatsapp' | 'website' | 'email' | "vk" | "facebook" | "twitter" | "instagram";
         value: string;
         isPublic: boolean;
     }>;
@@ -54,7 +61,7 @@ export interface UserDto {
         qualificationCategory?: 'Вторая категория' | 'Первая категория' | 'Высшая категория';
         main?: boolean;
     }>;
-    role: 'student' | 'admin' | 'user' | 'doctor'; // исправили енум
+    role: 'student' | 'admin' | 'user' | 'doctor';
     following: string[];
     followers: string[];
     joinTo: Array<{
@@ -72,5 +79,5 @@ export interface UserDto {
     isVerified: boolean;
     createdAt: Date;
     updatedAt: Date;
-    isFollowing?: boolean; // опциональное поле для UI
+    isFollowing?: boolean;
 }

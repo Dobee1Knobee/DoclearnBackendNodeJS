@@ -1,28 +1,33 @@
-import {UserDto} from "@/dto/UserDto";
+import { UserDto } from '../dto/UserDto'; // Импортируйте ваш интерфейс
 
 export function mapUserToPublicDto(user: any, isFollowing?: boolean): UserDto {
     return {
-        _id: (user as any)._id || (user as any)._id?.toString() || '',
+        _id: (user as any)._id?.toString() || '',
         firstName: user.firstName || '',
-        avatarUrl : user.avatarUrl || "",
-        middleName: user.middleName || '',
         lastName: user.lastName || '',
-        specializations : user.specializations || '',
-        workHistory: user.workHistory || '',
-        defaultAvatarPath : user.defaultAvatarPath || '',
-        specialization: user.specialization || '',
-        location: user.location || '',
-        experience: user.experience || '',
+        middleName: user.middleName,
+        documents: user.documents || [],
+        defaultAvatarPath: user.defaultAvatarPath || '',
+        location: user.location,
+        experience: user.experience,
         rating: user.rating || 0,
         bio: user.bio,
         email: user.email || '',
         birthday: user.birthday || new Date(),
         placeWork: user.placeWork,
-        avatarId: user.avatarId || null,        // ← ИЗМЕНЕНО: avatar → avatarId
+        placeStudy: user.placeStudy, // Добавлено новое поле
+        scientificStatus: user.scientificStatus ? {
+            degree: user.scientificStatus.degree || null,
+            title: user.scientificStatus.title || null,
+            rank: user.scientificStatus.rank || null,
+            interests: user.scientificStatus.interests || []
+        } : undefined, // Добавлено новое поле
+        avatarId: user.avatarId || null,
+        avatarUrl: user.avatarUrl || null,
         contacts: user.contacts || [],
         education: user.education || [],
-        documents: user.documents ||[],
-
+        workHistory: user.workHistory, // Опциональное поле - может быть undefined
+        specializations: user.specializations, // Опциональное поле - может быть undefined
         role: user.role || 'user',
         following: user.following?.map((id: any) => id.toString()) || [],
         followers: user.followers?.map((id: any) => id.toString()) || [],

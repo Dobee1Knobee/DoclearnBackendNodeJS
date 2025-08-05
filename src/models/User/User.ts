@@ -57,19 +57,25 @@ const userSchema = new Schema({
         degree: {
             type: String,
             enum: ['Кандидат медицинских наук', 'Доктор медицинских наук'],
-            default: null
+            default: null,
+            required: false  // Добавьте это
         },
         title: {
             type: String,
             enum: ['Доцент', 'Профессор'],
-            default: null
+            default: null,
+            required: false  // Добавьте это
         },
         rank: {
             type: String,
             enum: ['Член-корреспондент РАН', 'Академик РАН'],
-            default: null
+            default: null,
+            required: false  // Добавьте это
         },
-        interests: [{ type: String }]
+        interests: {
+            type: [{ type: String }],
+            default: []  // Добавьте default для массива
+        }
     },
     achievements: [{
         type: Schema.Types.Mixed

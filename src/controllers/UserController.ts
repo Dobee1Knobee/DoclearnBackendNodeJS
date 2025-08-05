@@ -147,12 +147,59 @@ export class UserController {
             if (!req.user?.id) {
                 throw new ApiError(401, "Пользователь не аутентифицирован");
             }
-            const result = await this.userService.updateUserProfile(req.user.id, req.body);
+
+            console.log('Входящие данные в контроллере:', JSON.stringify(req.body, null, 2));
+
+            // Преобразуем специализации ЗДЕСЬ, в контроллере
+            let processedData = { ...req.body };
+
+            if (processedData.specializations) {
+                console.log('Преобразуем специализации в контроллере...');
+
+                processedData.specializations = processedData.specializations.map((spec: any, index: number) => {
+                    console.log(`Специализация ${index} до преобразования:`, spec);
+
+                    // Валидация
+                    if (!spec.specializationId) {
+                        throw new ApiError(400, 'specializationId обязателен для специализации');
+                    }
+
+                    const methodValue = spec.method?.type || spec.method;
+                    const validMethods = ['Ординатура', 'Профессиональная переподготовка'];
+                    if (!methodValue || !validMethods.includes(methodValue)) {
+                        throw new ApiError(400, `Неверный метод: ${methodValue}. Допустимые: ${validMethods.join(', ')}`);
+                    }
+
+                    const categoryValue = spec.qualificationCategory?.type || spec.qualificationCategory;
+                    if (categoryValue) {
+                        const validCategories = ['Вторая категория', 'Первая категория', 'Высшая категория'];
+                        if (!validCategories.includes(categoryValue)) {
+                            throw new ApiError(400, `Неверная категория: ${categoryValue}. Допустимые: ${validCategories.join(', ')}`);
+                        }
+                    }
+
+                    // Преобразование в формат БД
+                    const transformed = {
+                        specializationId: spec.specializationId,
+                        name: spec.name,
+                        method: methodValue, // Простая строка для БД
+                        qualificationCategory: categoryValue, // Простая строка для БД
+                        main: Boolean(spec.main)
+                    };
+
+                    console.log(`Специализация ${index} после преобразования:`, transformed);
+                    return transformed;
+                });
+            }
+
+            console.log('Финальные данные для сервиса:', JSON.stringify(processedData, null, 2));
+
+            const result = await this.userService.updateUserProfile(req.user.id, processedData);
             res.status(200).json({
                 success: true,
                 data: result
-            })
-        }catch(error) {
+            });
+        } catch (error) {
             next(error);
         }
     }

@@ -66,20 +66,27 @@ export class UserService {
             if (!result) {
                 throw new ApiError(404, "Пользователь не найден");
             }
-            const userWithAvatar = mapUserToPublicDto(result);
-            if (result.avatarId) {
-                const avatarUrl = await this.getAvatarUrl(result.avatarId._id.toString());
-                userWithAvatar.avatarId = result.avatarId._id.toString();
-                userWithAvatar.avatarUrl = avatarUrl || undefined;
-            }
 
+            const userWithAvatar = mapUserToPublicDto(result);
+
+            // Handle avatar ID and URL properly
+            if (result.avatarId) {
+                const avatarIdString = result.avatarId._id.toString();
+                userWithAvatar.avatarId = avatarIdString;
+
+                const avatarUrl = await this.getAvatarUrl(avatarIdString);
+                userWithAvatar.avatarUrl = avatarUrl; // This will be string | null
+            } else {
+                // Explicitly set to null if no avatar
+                userWithAvatar.avatarId = null;
+                userWithAvatar.avatarUrl = null;
+            }
 
             return userWithAvatar;
         } catch (error) {
             this.handleError(error, "Ошибка при получении профиля пользователя");
         }
     }
-
 
     /**
      * Получить документы пользователя
@@ -387,7 +394,7 @@ export class UserService {
         const allowedFields = [
             'firstName', 'lastName', 'location', 'experience',
             'bio', 'placeWork', 'specializations', 'avatar',
-            'contacts', 'education','birthday','defaultAvatarPath','middleName','role','specializations','placeWork','placeStudy','scientificStatus'
+            'contacts', 'education','birthday','defaultAvatarPath','middleName','role','specializations','placeWork','placeStudy','scientificStatus',"workHistory"
         ];
 
         const receivedFields = Object.keys(updateData);
