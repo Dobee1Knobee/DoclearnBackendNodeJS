@@ -78,7 +78,7 @@ async function testSearch() {
         console.log('📝 ТЕСТ 4: Автодополнение');
         console.log('─'.repeat(50));
 
-        const prefixes = ['Ива', 'Але', 'Пет'];
+        const prefixes = ['Егор', 'Але', 'Пет'];
         for (const prefix of prefixes) {
             const suggestions = await searchService.autocomplete(prefix, 3);
             console.log(`Автодополнение для "${prefix}":`);

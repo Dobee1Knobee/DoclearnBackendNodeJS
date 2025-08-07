@@ -4,7 +4,6 @@ import { ApiError } from "@/errors/ApiError";
 import multer from 'multer';
 import logger from "@/logger";
 import {UserSearchService} from "@/services/SearchUsersService";
-
 // Расширяем Request для типизации JWT payload
 interface AuthenticatedRequest extends Request {
     user?: {
@@ -17,7 +16,8 @@ const upload = multer();
 
 export class UserController {
     private userService: UserService;
-    private searchService : UserSearchService
+    private searchService: UserSearchService;
+
     constructor() {
         this.userService = new UserService();
         this.searchService = new UserSearchService();
@@ -45,6 +45,7 @@ export class UserController {
             next(error);
         }
     }
+
     async uploadDocumentsToProfile(
         req: AuthenticatedRequest,
         res: Response,
@@ -75,7 +76,6 @@ export class UserController {
         }
     }
 
-
     async uploadEducationDoc(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
         try {
             const userId = req.user?.id;
@@ -94,7 +94,7 @@ export class UserController {
                 throw new ApiError(400, "Файл не загружен");
             }
 
-            const result = await this.userService.uploadEducationDocs(userId, file,educationId);
+            const result = await this.userService.uploadEducationDocs(userId, file, educationId);
             res.status(200).json({
                 success: true,
                 data: result
@@ -103,6 +103,7 @@ export class UserController {
             next(error);
         }
     }
+
     /**
      * Получить профиль пользователя по ID
      * GET /api/users/:id/profile
@@ -206,6 +207,7 @@ export class UserController {
             next(error);
         }
     }
+
     /**
      * Получить подписчиков пользователя
      * GET /api/users/:id/followers
@@ -333,25 +335,97 @@ export class UserController {
         }
     }
 
-
     /**
-     * Поиск пользователей
+     * Поиск пользователей с полнотекстовым поиском
      * GET /api/users/search?q=query&limit=20
      */
-    async searchUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async searchUsers(req: Request, res: Response, next: NextFunction): Promise<e.Response<any, Record<string, any>>> {
         try {
             const query = req.query.q as string;
             const limit = parseInt(req.query.limit as string) || 20;
 
-            if (!query || query.trim().length < 2) {
-                throw new ApiError(400, "Поисковый запрос должен содержать минимум 2 символа");
+            // Обрабатываем пустой запрос
+            if (!query || query.trim().length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        users: [],
+                        total: 0,
+                        query: query,
+                        message: 'Пустой запрос'
+                    },
+                    total: 0,
+                    count: 0
+                });
             }
 
-            const result = await this.searchService.search(query);
+            // Используем новый метод searchUsers
+            const result = await this.searchService.searchUsers(query, limit);
+
+            res.status(200).json({
+                success: true,
+                data: result,
+                total: result.total,
+                count: result.users.length
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Автодополнение для поиска
+     * GET /api/users/autocomplete?q=prefix&limit=5
+     */
+    async autocomplete(req: Request, res: Response, next: NextFunction): Promise<e.Response<any, Record<string, any>>> {
+        try {
+            const prefix = req.query.q as string;
+            const limit = parseInt(req.query.limit as string) || 5;
+
+            if (!prefix || prefix.length < 2) {
+                return res.status(200).json({
+                    success: true,
+                    data: [],
+                    count: 0
+                });
+            }
+
+            const result = await this.searchService.autocomplete(prefix, limit);
+
             res.status(200).json({
                 success: true,
                 data: result,
                 count: result.length
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * Поиск по email
+     * GET /api/users/search/email?email=user@example.com
+     */
+    async searchByEmail(req: Request, res: Response, next: NextFunction): Promise<e.Response<any, Record<string, any>>> {
+        try {
+            const email = req.query.email as string;
+
+            if (!email) {
+                throw new ApiError(400, "Email обязателен для поиска");
+            }
+
+            const result = await this.searchService.searchByEmail(email);
+
+            if (!result) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Пользователь с таким email не найден"
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: result
             });
         } catch (error) {
             next(error);
