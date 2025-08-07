@@ -277,13 +277,31 @@ userSchema.pre('updateOne', async function(next) {
 });
 
 // Индексы для оптимизации
-userSchema.index({ email: 1 });
-userSchema.index({ role: 1 });
-userSchema.index({ 'isVerified.user': 1 });
-userSchema.index({ 'education.id': 1 });
-userSchema.index({ 'specializations.specializationId': 1 });
-userSchema.index({ 'workHistory.id': 1 });
-
+userSchema.index({
+    firstName: "text",
+    middleName: "text",
+    lastName: "text",
+    bio: "text",
+    location: "text",
+    placeWork: "text",
+    placeStudy: "text",
+    "specializations.name": "text",
+    "education.institution": "text",
+    "workHistory.organizationName": "text"
+}, {
+    weights: {
+        firstName: 10,      // Максимальный вес
+        lastName: 10,       // Максимальный вес
+        "specializations.name": 8,  // Очень важно
+        placeWork: 5,       // Средне важно
+        "education.institution": 5,  // Средне важно
+        middleName: 3,      // Менее важно
+        location: 2,        // Еще менее важно
+        bio: 1              // Минимальный вес
+    },
+    name: "search_text",
+    default_language: "russian"
+});
 // Типы
 export type User = InferSchemaType<typeof userSchema>;
 export type PublicUser = Omit<User, 'password'>;

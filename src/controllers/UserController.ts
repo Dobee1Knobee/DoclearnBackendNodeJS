@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiError } from "@/errors/ApiError";
 import multer from 'multer';
 import logger from "@/logger";
+import {UserSearchService} from "@/services/SearchUsersService";
 
 // Расширяем Request для типизации JWT payload
 interface AuthenticatedRequest extends Request {
@@ -16,8 +17,10 @@ const upload = multer();
 
 export class UserController {
     private userService: UserService;
+    private searchService : UserSearchService
     constructor() {
         this.userService = new UserService();
+        this.searchService = new UserSearchService();
     }
 
     async uploadAvatar(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
@@ -344,7 +347,7 @@ export class UserController {
                 throw new ApiError(400, "Поисковый запрос должен содержать минимум 2 символа");
             }
 
-            const result = await this.userService.searchUsers(query, limit);
+            const result = await this.searchService.search(query);
             res.status(200).json({
                 success: true,
                 data: result,

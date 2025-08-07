@@ -212,6 +212,7 @@ export class UserService {
                 .limit(limit)
                 .lean();
 
+
             const usersRes = await Promise.all(users.map(async (user) => {
                 const userDto = mapUserToPublicDto(user);
                 if(user.avatarId){
