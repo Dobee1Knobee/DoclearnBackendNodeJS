@@ -339,14 +339,14 @@ export class UserController {
      * Поиск пользователей с полнотекстовым поиском
      * GET /api/users/search?q=query&limit=20
      */
-    async searchUsers(req: Request, res: Response, next: NextFunction): Promise<e.Response<any, Record<string, any>>> {
+    async searchUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const query = req.query.q as string;
             const limit = parseInt(req.query.limit as string) || 20;
 
             // Обрабатываем пустой запрос
             if (!query || query.trim().length === 0) {
-                return res.status(200).json({
+                res.status(200).json({
                     success: true,
                     data: {
                         users: [],
@@ -357,6 +357,7 @@ export class UserController {
                     total: 0,
                     count: 0
                 });
+                return;
             }
 
             // Используем новый метод searchUsers
@@ -377,17 +378,18 @@ export class UserController {
      * Автодополнение для поиска
      * GET /api/users/autocomplete?q=prefix&limit=5
      */
-    async autocomplete(req: Request, res: Response, next: NextFunction): Promise<e.Response<any, Record<string, any>>> {
+    async autocomplete(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const prefix = req.query.q as string;
             const limit = parseInt(req.query.limit as string) || 5;
 
             if (!prefix || prefix.length < 2) {
-                return res.status(200).json({
+                res.status(200).json({
                     success: true,
                     data: [],
                     count: 0
                 });
+                return;
             }
 
             const result = await this.searchService.autocomplete(prefix, limit);
@@ -406,7 +408,7 @@ export class UserController {
      * Поиск по email
      * GET /api/users/search/email?email=user@example.com
      */
-    async searchByEmail(req: Request, res: Response, next: NextFunction): Promise<e.Response<any, Record<string, any>>> {
+    async searchByEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const email = req.query.email as string;
 
@@ -417,10 +419,11 @@ export class UserController {
             const result = await this.searchService.searchByEmail(email);
 
             if (!result) {
-                return res.status(404).json({
+                res.status(404).json({
                     success: false,
                     message: "Пользователь с таким email не найден"
                 });
+                return;
             }
 
             res.status(200).json({
